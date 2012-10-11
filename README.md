@@ -1,4 +1,4 @@
 bugquery
 ========
 
-Borqs bugquery system. A powerful server provides gathering and analysist bugs in system/feature/app level.
+Borqs bugquery system. A powerful server-side web app provides gathering and analysist functions for bugs on system/feature/app level under smartphone OS.
