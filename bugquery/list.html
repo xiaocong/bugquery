@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Errorlist</title>
+    <link href="styles/bootstrap.css" rel="stylesheet"/>   
+    <link href="kendo/styles/kendo.common.min.css" rel="stylesheet"/>
+    <link href="kendo/styles/kendo.default.min.css" rel="stylesheet"/>
+    <link href="styles/jquery-ui-1.8.16.custom.css" rel="stylesheet"/> 
+    <link href="styles/style.css" rel="stylesheet"/>
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="js/html5.js"></script>
+    <![endif]-->                     
+</head>
+
+<body>          	  	
+    <header>
+        <div class="sfContentBlock">
+            <h2>BugQuery</h2>
+            <div class="navbar pull-right" style="margin-top:18px;font-size:14px">
+                <ul class="nav">
+                    <li><a class="navbar-text" href="javascript:changepswd();" id="loggedid"></a></li>
+                    <li><a class="navbar-text" href="javascript:logout();">Logout</a></li>
+                </ul>
+            </div> 
+        </div>
+        <div id="dlgpswd" style="display:none;padding-top:5px;font-size:14px">
+            <table>
+               <tr class="row-2"  >
+                 <td class="k-grid-header">Old Password</td>
+                 <td><input type="password" id="txtoldpswd"/></td>
+               </tr>
+
+               <tr class="row-2"  >
+                 <td class="k-grid-header">New Password</td>
+                 <td><input type="password" id="txtnewpswd"/></td>
+               </tr>
+
+               <tr class="row-2"  >
+                 <td class="k-grid-header">Confirm Password</td>
+                 <td><input type="password" id="txtcfmpswd"></td>
+               </tr>  
+
+               <tr class="row-2" >
+                  <td align="center" colspan="2">          
+                    <input type="button" value='OK' align="center" onclick="dochnpswd()"/>           
+            </td>
+         </tr>              
+          </table>
+        </div>
+  </header>
+  
+  <nav class="greyback">  
+        <ul>
+          <li id="tabindex" class="first-child"><a href="index.html"></a></li> 
+        </ul>
+        <div id="menu">
+         <div id="searchContainer">
+         <input type="text" id="searchTextBox" onkeyup="onKeyAction(event)" class="sfsearchTxt" placeholder="search by issue id..." />
+         <div class="sfSearchImageContainer">
+             <input type="submit" onclick="gotoRecord()" value="" id="searchButton" title="Search" class="sfsearchSubmit button" />
+             <img src="./styles/images/google-search-button.png" alt="search" class="sfSearchSubmit-top" />
+        </div>
+        </div>
+        </div>
+   </nav> 	
+
+    <div id="main" class="k-grid"> 
+	    <div id="img" style="position:absolute;z-index: 1;"></div>             
+      
+      <table class="k-widget">
+          <tr class="k-grid-header" style="background-color:#8c8c8c;"><td>Summary</td></tr>
+      </table>
+
+      <table class="k-widget" style="padding:1px 25px 5px 5px;" id="summarylist"></table>
+
+      <table class="k-widget">
+          <tr class="k-grid-header" style="background-color:#8c8c8c;"><td>Issue list</td></tr>
+      </table>
+  
+      <div style="padding:1px 25px 5px 5px ;"><div id="errorlist" ></div> </div>
+     	   	   	   	             
+    </div>
+
+    <footer>
+      <table align="center" style="border: none">
+           <tr align="center">
+              <td>
+                <address>Copyright &copy; 2007-2012 Borqs.co</address>
+                <address><a href="mailto:jiliang.chen@borqs.com">contact us</a></address>
+                  </td>
+            </tr>
+      </table>                      
+    </footer> 
+    
+    <script src="kendo/js/jquery.min.js"></script>
+    <script src="js/jquery-ui-1.8.17.custom.min.js"></script>
+    <script src="kendo/js/kendo.all.min.js"></script>
+    <script src="js/jquery.cookie.js"></script>     
+    <script type="text/javascript">
+           if(($.cookie('bqticket') === null) || ($.cookie('bqticket') === '')) {
+              $.cookie('url_redirect',window.location,{expires:1});
+              window.location = "login.html";
+           }
+    </script>        
+    
+    <!--Bugquery developed js-->        
+    <script  type="text/javascript" src="js/data_global.js"></script>                  
+    <script  type="text/javascript" src="js/data_list.js"></script> 
+
+    <script>  
+        $(document).ready(function() {
+             createListGrid();
+        });
+        function onKeyAction(env) {
+           if(env.keyCode === 13) gotoRecord();
+        }    
+    </script>     
+        
+      
+               
+   </body>
+</html>
+
