@@ -137,7 +137,11 @@ var ajaxRequest = function(apiUrl,dataj,filter,render) {
              options['url'] = options['url'].replace(oldt,newt);
              $.ajax(options);
          } else {
+            if(data['results']['error']['msg'] !== undefined){              
              alert(data['results']['error']['msg']);
+           }else{
+              alert(data['results']['error'])
+           }
              ajaxend();
          }
       } else {

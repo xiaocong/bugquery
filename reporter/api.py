@@ -2,9 +2,12 @@
 from bottle import Bottle, route, run, get, post, put, delete, request, response, abort, debug
 from reporter import Reporter
 from viewer import Viewer
-import uuid
-
+import auth
 import dcrator
+
+import uuid
+from time import time
+from datetime import datetime,timedelta
 
 '''
 Author: Chen Jiliang
@@ -18,6 +21,10 @@ viewer=Viewer()
 
 
 ###########API for add data###################
+@app.route('/report',method='GET')# Only for test
+def report_test():
+    return 'Test Only'
+
 @app.route('/report',method='POST')
 def report_post():
     '''
@@ -57,21 +64,46 @@ def upload_put(record_id):
 ###########Retrieve related routing###################
 @app.route('/record/<record_id>',method='GET')
 #@brdecorator.check_user(brdecorator.auth,"brquery")
-def get_report(record_id):   
+def get_report(record_id):  
+    keyToken='token'
+    if keyToken in request.params.keys():
+        token=request.params.get(keyToken)
+    else:
+        return wrapResults({"error":{'code':0,'msg':"No token provided!"}})
+    accessible=auth.getAccessibleProducts(token)
+    if 'error' in accessible:
+        return wrapResults(accessible)
+    if len(accessible['products'])==0:
+        return wrapResults({'error':{'code':0,'msg':'No accessible products.'}})
+
     reporter=Reporter() 
     data=reporter.get_report(record_id)
-    return data
+    #print data
+    sysInfo=data.pop('sys_info')
+    si={}
+    for key in sysInfo:
+        rKey=key.replace(':','.')
+        si[rKey]=sysInfo[key]
+    if not 'android.os.Build.PRODUCT' in si:
+        return wrapResults({'error':{'code':0,'msg':'Permission denial.'}})
+    if not si['android.os.Build.PRODUCT'] in accessible['products']:
+        return wrapResults({'error':{'code':0,'msg':'Permission denial.'}})
+    else:
+        data['sys_info']=si
+        return wrapResults(data)
 
 @app.route('/record/<record_id>/log',method='GET')
 ####@check_user(auth)#mantis soap attachment issue
-def get_log(record_id=None): 
-    ##print 'get_log()'
-
-    if not record_id or record_id is None:
-        abort(500,"Invalid record_id")
+def get_log(record_id): 
+    ##print 'get_log()'    
+    reporter=Reporter()    
+    log=reporter.get_log(record_id)
+    if log==None:
+        abort(404,"Can not find the log!")
     else:
-        reporter=Reporter()    
-        return reporter.get_log(record_id)
+        response.set_header('Content-Type','application/x-download')
+        response.set_header('Content-Disposition','attachment; filename=log_'+record_id+'.zip',True)
+        return log
         
 @app.route('/record/<record_id>/ticket_url',method='POST')
 #@brdecorator.check_user(brdecorator.auth,"brquery")
@@ -182,7 +214,7 @@ def ids():
     reporter=Reporter()    
     return reporter.ids()
 
-#@app.route('/record/latest',method='GET')
+@app.route('/record/latest',method='GET')
 #@brdecorator.check_user(brdecorator.auth,"brquery")
 def latest():
     '''
@@ -199,8 +231,25 @@ def latest():
     document:{"_id":id,"receive_time":time,"json_str":original}     
     
     '''
+    keyToken='token'
+    if keyToken in request.params.keys():
+        token=request.params.get(keyToken)
+    else:
+        return wrapResults({"error":"No token provided!"})
+    accessible=auth.getAccessibleProducts(token)
+    if 'error' in accessible:
+        return wrapResults(accessible)
+    if len(accessible['products'])==0:
+        return wrapResults({'error':'No accessible products.'})    
+
+    limit=request.params.get('limit')
     reporter=Reporter()
-    return reporter.latest()
+    data=reporter.latest(limit)
+    result=[]
+    for record in data:
+        if record['product'] in accessible['products']:
+            result.append(record)
+    return wrapResults(result)
 
 ###########Delete related routing###################
 
@@ -229,13 +278,6 @@ def delete_log(record_id=None):
 def keys():
     return wrapResults(viewer.info_keys())
 
-#Return all the values for special sys_info key in json string
-'''
-involve permission checking, and not necessary, so comment it out
-@app.route('/query/keys/<key>')
-def values(key):
-    return wrapResults(brquery.info_values(key))
-'''
 @app.route('/query/platforms')
 def platforms():
     return wrapResults(viewer.platforms())
@@ -245,13 +287,16 @@ def platforms():
     return wrapResults(viewer.errorTypes())
         
 #Return all the android.os.build.RELEASE.VERSION and the relative products in json string
-#@app.route('/query/products')
-'''
-?Who use?
-'''
+@app.route('/query/products')
 def release_products():
     token=request.params.get("token")
-    results=brquery.info_release_product(token)
+    accessible=auth.getAccessibleProducts(token)
+    if 'error' in accessible:
+        return wrapResults(accessible)
+    if len(accessible['products'])==0:
+        return wrapResults({'error':'No accessible products.'})
+
+    results=viewer.info_release_product(accessible['products'])
     return wrapResults(results)
 
 @app.route('/query/swversion')
@@ -289,6 +334,7 @@ def rate():
     return wrapResults(viewer.rate_summary(conds, group))
 
 #Get error list by conditions
+@dcrator.timeit
 @app.route('/query/error')
 @app.route('/query/error/')
 def error():
@@ -297,21 +343,67 @@ def error():
     request:query/error?conditions&page=1&records=25&paging_token=xxx-xxx
     response: {"results":{"paging":{"totalrecords":100,"totalpages":10,"records":10,"page":1,"paging_token":"xxx-xxx"},"data":[{},{}]}}
     '''
+    keyToken='token'
+    if keyToken in request.params.keys():
+        token=request.params.get(keyToken)
+    else:
+        return wrapResults({"error":"No token provided!"})
+    accessible=auth.getAccessibleProducts(token)
+    if 'error' in accessible:
+        return wrapResults(accessible)
+    if len(accessible['products'])==0:
+        return wrapResults({'error':'No accessible products.'})
+
     paging=getPagingParameters()    
     conds = getFilterConditions()
-    return wrapResults(viewer.errors(conds,paging))
+    conds.pop('token')
+    if 'android.os.Build.PRODUCT' in conds:
+        if not (conds['android.os.Build.PRODUCT'] in accessible['products']):
+            return wrapResults({'error':'You have no rights to view the data of product:%s'%conds['android.os.Build.PRODUCT']})
+    result=viewer.errors(accessible['products'],paging,conds)
+    if result is None:
+        return wrapResults({'error':{'code':0,'msg':'Result is empty! Change the conditions and try again!'}})
+    else:
+        reporter=Reporter()
+        ids=result['data']
+        records=reporter.get_batch_report(ids)
+        result['data']=records
+        return wrapResults(result)
 
 #download excel for error list by condistions
-@app.route('/query/error/download')
-@app.route('/query/error/download/')
+@app.route('/query/error/excel')
 def download():
-    print "Received requet from:%s"%request.remote_addr
-    paging=getPagingParameters()
+    keyToken='token'
+    if keyToken in request.params.keys():
+        token=request.params.get(keyToken)
+    else:
+        return wrapResults({"error":"No token provided!"})
+    accessible=auth.getAccessibleProducts(token)
+    if 'error' in accessible:
+        return wrapResults(accessible)
+    if len(accessible['products'])==0:
+        return wrapResults({'error':'No accessible products.'})
+
+    paging=getPagingParameters()    
     conds = getFilterConditions()
-    data = wrapResults(viewer.errors(conds,paging))
-    if len(data)==0:
-        print 'empty set.'
-    return viewer.error_list_excel(data)
+    conds.pop('token')
+    if 'android.os.Build.PRODUCT' in conds:
+        if not (conds['android.os.Build.PRODUCT'] in accessible['products']):
+            return wrapResults({'error':'You have no rights to view the data of product:%s'%conds['android.os.Build.PRODUCT']})
+    result=viewer.errors(accessible['products'],paging,conds)
+    if result is None:
+        return wrapResults({'error':{'code':0,'msg':'Result is empty! Change the conditions and try again!'}})
+    else:
+        reporter=Reporter()
+        ids=result['data']
+        records=reporter.get_batch_report(ids)
+        result['data']=records
+        print records[0]
+        #return wrapResults(result)
+        f=viewer.error_list_excel(records)
+        response.set_header('Content-Type','application/vnd.ms-excel')
+        response.set_header("Content-Disposition", "attachment;filename=errorlist.xls");
+        return f
   
 @app.route('/summary')
 @app.route('/summary/')
@@ -383,30 +475,39 @@ def product_summary():
     token=None
     platform=None    
     mode='error'
-    callDropMode=False        
-    
+    callDropMode=False
+
     if keyToken in request.params.keys():
         token=request.params.get(keyToken)
     else:
         return wrapResults({"error":"No token provided!"})
-    
+    accessible=auth.getAccessibleProducts(token)
+    if 'error' in accessible:
+        return wrapResults(accessible)
+    if len(accessible['products'])==0:
+        return wrapResults({'error':'No accessible products.'})
+
     if keyPlatform in request.params.keys():
         platform=request.params.get(keyPlatform)
     if platform==None:
-        platform='4.0.4'
-        
+        platform='4.0.4'        
         
     if keyMode in request.params.keys():
         mode=request.params.get(keyMode)
     if mode=='drop':
         callDropMode=True
         
-    return wrapResults(brquery.product_summary(token,platform,callDropMode))
+    return wrapResults(viewer.product_summary(accessible['products'],platform,callDropMode))
     
 
 ###################Utilities####################
 def wrapResults(results):
     callback = getCallback()
+    if 'error' in results:
+        if not 'code' in results['error']:
+            errbody={'code':0,'msg':results.pop('error')}
+            results={'error':errbody}
+
     if len(callback) > 0:
         return '%s(%s);'%(callback, json.dumps({'results':results}))
     else:
@@ -425,36 +526,27 @@ def getCallback():
 def getFilterConditions():
     cond = {}
     try:
-        keys = brquery.info_keys()
+        keys = viewer.info_keys()
         for key in request.params.keys():
             if (key in keys) or (key in ('e_type','name','starttime','endtime','token','imsi','date','mode')):
                 if key=='imsi':
                     cond['phoneNumber'] = "IMSI:%s"%request.params[key]
                 elif key=='date':#like:20120612
                     datestr=request.params[key]
-                    if len(datestr)==8:
-                        year=int(datestr[0:4])
-                        month=int(datestr[4:6])
-                        day=int(datestr[6:8])
-                        start=datetime.date(year,month,day)
-                        end=datetime.date.fromtimestamp(int(start.strftime("%s"))+3600*24)
-                        starttime=start.strftime("%s")
-                        endtime=end.strftime("%s")
-                        cond['starttime'] = starttime
-                        cond['endtime'] = endtime       
-                    else:
-                        print "Value error for parameter date:%s"%datestr                    
+                    date=datetime.strptime(datestr,'%Y%m%d')
+                    cond['starttime'] = date.strftime("%s")
+                    cond['endtime'] = (date+timedelta(days=1)).strftime('%s')
                 else:
-                    cond[key] = request.params[key]
+                    cond[key] = request.params[key]        
     except Exception, e:
         print 'getFilterConditions():%s'%e
-        pass
+        abort(500,'%s'%e)
     return cond
 
 def getGroupKey():
     group = ''
     try:
-        valid_values = brquery.info_keys()
+        valid_values = viewer.info_keys()
         for key in request.params.keys():
             if key == 'groupby' and request.params[key] in valid_values:
                 group = request.params[key]

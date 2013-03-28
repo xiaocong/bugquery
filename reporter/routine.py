@@ -61,15 +61,16 @@ report_data:
 
 
 ''' Redis structure
-#id:min
 id:max             Key to store the max ID of record. We used it when creating new record in redis.
-#ids:i               Set of IDs which contain sys info.
 ids:i:<key>:<value> Set of IDs which contain specified key and value in sys info.
 
-ids:b               Set of IDs which contain all errors.
+ids:b               Set of IDs which contain all errors.(Without CALL_DROP)
 ids:b:<type>        Set of IDs which contain all errors with <type>, e.g. FORCE_CLOSE.
-ids:b:<type>:<name> Set of IDs which contain all errors with <type> and <name>. 
+#ids:b:<type>:<name> Set of IDs which contain all errors with <type> and <name>. 
                     e.g. type = FORCE_CLOSE name = and com.borqs.home
+ids:b:<name>        Set of ids, (without CALL_DROP)
+set:b:name          Set of names( without name in CALL_DROP)
+
 ids:s               Set of IDs which contain all statistic records.
 ids:s:<type>:<name> Set of IDs which contain all statistic records with <type> and <name>,
                     e.g. type = com.borqs.bugreporter, and name = LIVE_TIME
@@ -88,6 +89,8 @@ b:t:<type>          Set of error names with specified type.
 s:t                 Set of statistic types
 s:t:<type>          Set of statistic names with specified type.
 s:values            HashSet of id/value pairs, which contains all statistic record id and its value.
+
+set:<platform>:<product>
 '''
 
 
@@ -162,23 +165,35 @@ def processSync():
             platform=sysInfo['android:os:Build:VERSION:RELEASE']
             product=sysInfo['android:os:Build:PRODUCT']            
             revision=sysInfo['ro:build:revision']
-            buildTime=sysInfo['android:os:Build:TIME'][:-3]# in seconds
+            buildTime=sysInfo['android:os:Build:TIME']# in milliseconds
             
             if 'unknown' in [platform.lower(),product.lower()]:
                 #print 'id=%s,unknown value'%(data['_id'])
                 continue
 
+            redisPipe.set('id:max', id)
+            redisPipe.zadd('ss:ids', id, receiveTime)
+            redisPipe.zadd('ss:revision', revision, buildTime)
+            redisPipe.sadd('set:%s:product'%platform,product)
+            redisPipe.sadd('ids:%s:%s'%(platform,product),id)
+            if 'unknown'==revision.lower():
+                redisPipe.zadd('ss:%s:%s:buildtime'%(platform,product), buildTime, buildTime)
+            else:
+                redisPipe.zadd('ss:%s:%s:revision'%(platform,product), revision, buildTime)            
+
             if category=='ERROR':
                 redisPipe.sadd('b:t', type)
-                redisPipe.sadd('ids:b:%s' % type, id)                
-                if(type=='CALL_DROP'):
-                    redisPipe.sadd('set:%s:%s:calldrop:revisions'%(platform,product),revision)
-                else:
-                    redisPipe.sadd('b:t:%s'%type, name)#except call drop
-                    redisPipe.sadd('ids:b', id)
-                    redisPipe.sadd('ids:b:%s:%s' % (type, name), id)
-                    redisPipe.sadd('set:%s:%s:error:revisions'%(platform,product),revision)
-                redisPipe.zadd('ss:ids:e', id, receiveTime)
+                redisPipe.sadd('ids:b', id)
+                redisPipe.sadd('ids:b:%s' % type, id)
+                redisPipe.zadd('ss:ids:b', id, receiveTime)
+                if type!='CALL_DROP':                    
+                    #redisPipe.sadd('b:t:%s'%type, name)#except call drop
+                    redisPipe.sadd('ids:e', id)                    
+                    redisPipe.zadd('ss:ids:e', id, receiveTime)
+                if type in ('ANR','FORCE_CLOSE','CORE_DUMP','SYSTEM_APP_WTF','SYSTEM_APP_STRICTMODE','MANUALLY_REPORT'):
+                    redisPipe.sadd('set:b:name', name)
+                    redisPipe.sadd('ids:b:%s' % name, id)
+
             elif category=='STATISTIC':
                 redisPipe.sadd('s:t', type)
                 redisPipe.sadd('s:t:%s'%type, name)
@@ -195,9 +210,6 @@ def processSync():
                 redisPipe.sadd('i:k:%s'%rKey, sysInfo[key])
                 redisPipe.sadd('ids:i:%s:%s' % (rKey, sysInfo[key]), id)                
                 #redisPipe.sadd('ids:i', id)
-            redisPipe.zadd('ss:ids', id, receiveTime)
-            redisPipe.zadd('ss:revision', revision, buildTime)
-            redisPipe.set('id:max', id)
             #redisPipe.execute()#Should limit the commands in pipeline, better less than 10000
         except Exception, e:
             print 'id=%s,error:%s'%(data['_id'],e)
@@ -309,8 +321,7 @@ def clearRedisDB():
 
 
 def routine():
-    print 'routine()'    
-    #clearRedisDB()
+    print 'routine()'
     processSync()#80 mins for 1 million
     processTrim()
 
@@ -318,4 +329,5 @@ if __name__ == '__main__':
     '''
     Tasks:sync,redis_trim,mongo_trim
     '''    
+    #clearRedisDB()
     routine()

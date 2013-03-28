@@ -34,14 +34,14 @@ def authAPI(username,password):
     {"token":"12345"}
     
     '''
-    print "authAPI()"
+    #print "authAPI()"
     if "@" in username:#mantis account
-        print "Mantis account"
+        #print "Mantis account"
         index=username.find("@")
         server=username[index+1:]        
         try:
             projects=getProjectList(server,username[:index],password)
-            print "projects:%s"%projects
+            #print "projects:%s"%projects
             if projects==None:
                 return {"error":{"code":17,"msg":"Accessible project list is empty"}}
             else:
@@ -142,7 +142,7 @@ def is_accessible(token,product):
 
 def getDB(name):
     if name=='mongo':
-        conn=MongoReplicaSetClient('192.168.5.60:27017,192.168.7.52:27017,192.168.5.156:27017', replicaSet='ats_rs')
+        conn=MongoReplicaSetClient('dbserver-1:27017,dbserver-2:27017,dbserver-3:27017', replicaSet='ats_rs')
         conn.read_preference = ReadPreference.SECONDARY_PREFERRED
         return conn.brauth
     elif name=='redis':
@@ -227,11 +227,11 @@ def addUser(name,password,email,priviledge,visible,callerPriv=0):
         #raise Exception('Missing visible!')
         return -1
     db=getDB('mongo')
-    print db    
+    #print db    
     m=hashlib.md5()
     m.update(password)
     record=db.user.find_one({"name":name})
-    print record
+    #print record
     if record==None:
         uid=getUserId()
         db.user.insert({"_id":int(uid),"name":name,"password":m.hexdigest(),"email":email,"priviledge":privValue,"visible":visible})
@@ -249,7 +249,7 @@ def getUser(callerPriv=0,uid=None,name=None):
     
     Return: A document contains the user info or a document list if no specific user info given.
     '''
-    print 'getUser()'
+    #print 'getUser()'
     if callerPriv==None:
         raise Exception("Caller priviledge needed.")
     db=getDB('mongo')
@@ -302,7 +302,7 @@ def setUser(callerPriv=0,uid=None,name=None,password=None,email=None,priviledge=
     
     Return: A document contains the info updated or None if fail.
     '''
-    print 'setUser()'
+    #print 'setUser()'
     if callerPriv==None:
         raise Exception("Caller priviledge needed.")
     db=getDB('mongo')
@@ -343,7 +343,7 @@ def setPass(username,password):
     '''
     Set password for given user. Maybe called when user change password.
     '''
-    print 'setPass()'
+    #print 'setPass()'
     db=getDB('mongo')
     m=hashlib.md5()
     m.update(password)
@@ -380,7 +380,7 @@ def removeUser(callerPriv=0,uid=None,name=None):
     
     Return: user id for the removed item or -1 if fail.
     '''
-    print 'removeUser()'
+    #print 'removeUser()'
     if callerPriv==None:
         raise Exception("Caller priviledge needed.")
     db=getDB('mongo')
@@ -406,7 +406,7 @@ def auth(name,password):
     Authentication for a user.
     Return: A document contains the user info if authenticate pass, otherwise return None.    
     '''
-    print 'auth()'
+    #print 'auth()'
     db=getDB('mongo')
     m=hashlib.md5()
     m.update(password)
@@ -442,7 +442,7 @@ def addRight(callerPriv=0,uid=None,pid=None):
     uid: user id.
     pid: product id.
     '''
-    print 'addRight()'
+    #print 'addRight()'
     db=getDB('mongo')
     user=getUser(uid=uid)
     if user==None:
@@ -462,10 +462,10 @@ def getRight(callerPriv=0,uid=None):
     
     Return: A list contains pid or None if no any right. 
     '''
-    print 'getRight(%s,%s)'%(callerPriv,uid)         
+    #print 'getRight(%s,%s)'%(callerPriv,uid)         
     db=getDB('mongo')
     user=getUser(uid=uid)
-    print "user:%s"%user
+    #print "user:%s"%user
     if user==None:
         return None
     elif callerPriv>user['priviledge']:
@@ -486,7 +486,7 @@ def removeRight(callerPriv=0,uid=0,pid=0):
     uid: user id
     pid: product id 
     '''
-    print 'removeRight()'    
+    #print 'removeRight()'    
     db=getDB('mongo')
     user=getUser(uid=uid)
     if user==None:
@@ -545,7 +545,7 @@ def removeProduct(pid=None,name=None):
     Remove product by id or name.    
     Return: product id for the removed item or -1 if fail.
     '''
-    print 'removeProduct()'
+    #print 'removeProduct()'
     db=getDB('mongo')
     record=None
     if pid!=None:
@@ -575,7 +575,7 @@ def addMapping(pid,project):
     project: project at server, such as: T2@borqsbt
     
     '''
-    print 'addMapping()'
+    #print 'addMapping()'
     db=getDB('mongo')
     if db.mapping.find_one({"p_id":pid,"project_at_server":project})==None:
         db.mapping.insert({"p_id":pid,"project_at_server":project}) 
@@ -585,7 +585,7 @@ def getMapping(pid=None,project=None):
     Get mapping relation.    
     Return: A list contains mapping item or None.
     '''
-    print "getMapping(pid=%s,project=%s)"%(pid,project)    
+    #print "getMapping(pid=%s,project=%s)"%(pid,project)    
     db=getDB('mongo')
     cursor=None    
     if pid!=None:
@@ -605,7 +605,7 @@ def removeMapping(pid,project):
     '''
     Remove mapping.    
     '''
-    print 'removeMapping(%s,%s)'%(pid,project)
+    #print 'removeMapping(%s,%s)'%(pid,project)
     
     db=getDB('mongo')
     db.mapping.remove({"p_id":pid,"project_at_server":project})
@@ -627,7 +627,7 @@ def addToken(token,uid):
     uid: user id
     expire_seconds: time in seconds
     '''
-    print 'addToken()'
+    #print 'addToken()'
     db=getDB('redis')
     pipe=db.pipeline(transaction=True)
     pipe.set(token,uid)
@@ -640,7 +640,7 @@ def validateToken(token):
     token: token
     Return: user id for the token if token valid or -1 if token invalid.
     '''
-    print 'validateToken()'
+    #print 'validateToken()'
     db=getDB('redis')
     if db.exists(token):
         db.expire(token,EXPIRE_TIMEOUT) #Automaticlly renew the token 

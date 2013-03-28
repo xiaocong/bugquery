@@ -4,7 +4,6 @@ import json
 
 import dcrator
 
-
 BRAUTH='http://localhost/api/brauth'
 
 def access(url,headers=None,data=None):    
@@ -14,8 +13,6 @@ def access(url,headers=None,data=None):
     if headers is not None:
         for key in headers:
             req.add_header(key,headers[key])
-    #req.add_header("x-user","brquery")
-    #req.add_header("x-password","Redis123") 
     f=urllib2.urlopen(req)
     return f.readline()    
     
@@ -50,7 +47,7 @@ def getAccessibleProducts(token):
             raise Exception('Invalid response:%s'%msg)
     except Exception, e:
         print "getAccessibleProducts(),error:%s"%e
-        return None
+        return {'error':'Encounter error while authenticating.'}
 
 if (__name__ == '__main__'):
     ret=getAccessibleProducts('6dd851bd-f8fc-4984-832c-88493d8b6314')

@@ -13,7 +13,7 @@ def timeit(func):
         start = time.time()
         ret=func(*a, **ka)
         end =time.time()
-        print 'Function %s() cost: %s s.'%(func.__name__,end - start)
+        print 'Function %s() cost: %.2f s.'%(func.__name__,end - start)
         return ret
     return wrapper
 

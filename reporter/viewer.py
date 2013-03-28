@@ -7,7 +7,7 @@ import json
 from pyExcelerator import *  
 #from bottle import response
 import time
-from datetime import datetime,date
+from datetime import datetime,date,timedelta
 
 #import urllib2
 
@@ -39,8 +39,27 @@ class Viewer(object):
     def platforms(self):
         return self.redis.sort('i:k:android.os.Build.VERSION.RELEASE',alpha=True)
 
+    def info_release_product(self,accessible):
+        redis = self.redis
+        pipe = self.pipe
+        
+        platforms=self.platforms()
+        
+        for platform in platforms:
+            pipe.smembers('set:%s:product'%platform)
+        ret=pipe.execute()
+        
+        results={}
+        i=0
+        for platform in platforms:
+            l=list(set(accessible)&set(ret[i]))
+            if (len(l)>0):
+                results[platform]=l
+            i+=1        
+        return results  
+
     def errorTypes(self):
-        return list(self.redis.sort('b:t'))
+        return self.redis.sort('b:t',alpha=True)
 
     def getLatestId(self,imei):
         '''
@@ -56,160 +75,155 @@ class Viewer(object):
     @dcrator.timeit
     def appList(self):
         #Get all apps in type:ANR,FORCE_CLOSE,CORE_DUMP,SYSTEM_APP_WTF,SYSTEM_APP_STRICTMODE
-        sets = []
-        sets.append('b:t:ANR')
-        sets.append('b:t:FORCE_CLOSE')
-        sets.append('b:t:CORE_DUMP')
-        sets.append('b:t:SYSTEM_APP_WTF')
-        sets.append('b:t:SYSTEM_APP_STRICTMODE')
-        return list(self.redis.sunion(sets))        
+        # sets = []
+        # sets.append('b:t:ANR')
+        # sets.append('b:t:FORCE_CLOSE')
+        # sets.append('b:t:CORE_DUMP')
+        # sets.append('b:t:SYSTEM_APP_WTF')
+        # sets.append('b:t:SYSTEM_APP_STRICTMODE')
+        # return list(self.redis.sunion(sets)) 
+        return self.redis.sort('set:b:name',alpha=True)       
     
-    def errors(self,conditions, paging):
-        print "conditions:"
-        for k in conditions:
-            print "%s=%s"%(k,conditions[k])
-            
-        print "paging:"
-        for k in paging:
-            print "%s=%s"%(k,paging[k])
-        
-            
-        #Check token
-        if 'token' in conditions:
-            token=conditions.pop('token')
-        else:
-            return {"error":{"code":12,"msg":"Invalid token"}}
-
-        redis = brconfig.getRedis()
-        pipe = redis.pipeline(transaction=True)
-        
+    @dcrator.timeit
+    def errors(self, accessible, paging, conditions):
         pagingCached=False
         pagingSet=None
         page=int(paging['page'])
-        records=int(paging['records'])
+        records=int(paging['records'])#Not limit the size
         totalRecords=None
         paging_token=None
         if 'paging_token' in paging:
             paging_token=paging['paging_token']
             pagingSet="tmp_paging_%s"%paging_token
-            if redis.exists(pagingSet):
+            if self.redis.exists(pagingSet):
                 pagingCached=True
 
-        ret = []    
-        
-        if not pagingCached:
-            print "not paging!"
-            sets = []
-            
-            #temporary set names
-            accessibleSet='tmp_%s'%str(uuid.uuid4())
-            timeFilteredSet='tmp_%s'%str(uuid.uuid4())
-            appSet='tmp_%s'%str(uuid.uuid4())
-            resultIdsSet='tmp_%s'%str(uuid.uuid4())
+        if pagingCached:
+            self.pipe.expire(pagingSet,30*60)
+            self.pipe.scard(pagingSet)
+            self.pipe.sort(pagingSet,desc=True,start=(page-1)*records,num=records)
+            result=self.pipe.execute()
+            totalRecords=result[1]
+            ret=result[2]
+        else:
+            sets = []            
             paging_token=str(uuid.uuid4())
             pagingSet="tmp_paging_%s"%paging_token
             
-            redis.hset("paging_token",paging_token,int(time.time())+30*60)
-            
-            #Get accessible set    
-            accessibleSet=getAccessibleSet(token,accessibleSet)
-            if accessibleSet==None:
-                print "Accessible Set is None!"
-                return ret
+            #processing accessible set
+            keyProduct='android.os.Build.PRODUCT'
+            keyPlatform='android.os.Build.VERSION.RELEASE'
+            if keyPlatform in conditions and keyProduct in conditions:
+                sets.append('ids:%s:%s'%(conditions.pop(keyPlatform),conditions.pop(keyProduct)))
+            elif keyProduct in conditions:
+                sets.append('ids:i:android.os.Build.PRODUCT:%s'%conditions.pop(keyProduct))
             else:
-                sets.append(accessibleSet)
+                accessibleSet=self.getAccessibleSet(accessible)
+                if accessibleSet is None:
+                    return None
+                else:
+                    sets.append(accessibleSet)
             
-            print "accessible sets[]:%s"%sets
-            #Get time filtered set    
-            starttime=0
-            endtime=0
-            ntf=False
-            if 'starttime' in conditions:
-                starttime=conditions.pop('starttime')
-                ntf=True        
-            if 'endtime' in conditions:
-                endtime=conditions.pop('endtime')
-                ntf=True    
-            if ntf:        
-                timeFilteredSet=getTimeFilteredSet(starttime,endtime,timeFilteredSet)        
-                if timeFilteredSet==None:
-                    print "Time Filtered Set is None!"
-                    return ret
+            #processing time filtered set
+            if self.needTimeFilter(conditions):
+                timeFilteredSet=self.getTimeFilteredSet(conditions)
+                if timeFilteredSet is None:
+                    return None
                 else:
                     sets.append(timeFilteredSet)
             
-            print "filtered sets[]:%s"%sets
-            
-            #For error type
+            #processing error type
             if 'e_type' in conditions:
                 sets.append('ids:b:%s' % conditions.pop('e_type'))
             else:
-                sets.append('ids:e')#All errors without call crop.
+                sets.append('ids:b')
+
+            #processing name
+            if 'name' in conditions:
+                sets.append('ids:b:%s'%conditions.pop('name')) 
                 
-            #Other query conditions
-            for k, v in conditions.items():
-                if k == 'name':
-                    sets_app = []
-                    sets_app.append('ids:b:FORCE_CLOSE:%s' % v)
-                    sets_app.append('ids:b:ANR:%s' % v)
-                    sets_app.append('ids:b:CORE_DUMP:%s' % v)
-                    sets_app.append('ids:b:MANUALLY_REPORT:%s' % v)
-                    pipe.sunionstore(appSet,sets_app)
-                    result=pipe.execute()
-                    if result[0]==0:
-                        return []
-                    else:
-                        sets.append(appSet)                
-                else:
-                    sets.append('ids:i:%s:%s' % (k,v))        
-            
-            print "last sets[]:%s"%sets
-            #Intersect all the sets
-            #TODO: Is here the best place to retrieve all the set members?
-            pipe.sinterstore(pagingSet,sets)
-            pipe.sort(pagingSet,desc=True,start=(page-1)*records,num=records)
-            result=pipe.execute()
+            #Other system info conditions
+            for key in conditions:
+                sets.append('ids:i:%s:%s' % (key,conditions[key]))
+            print sets
+            self.pipe.sinterstore(pagingSet,sets)
+            self.pipe.sort(pagingSet,desc=True,start=(page-1)*records,num=records)
+            self.pipe.expire(pagingSet,60*30)
+            result=self.pipe.execute()
             totalRecords=result[0]
-            ret=list(result[1])
-            print "totalRecords:%s"%totalRecords
-            print "pagingSet:%s"%pagingSet
-            
-            #Delete all temporary set
-            pipe.delete(accessibleSet)
-            pipe.delete(timeFilteredSet)
-            pipe.delete(appSet)
-            pipe.delete(resultIdsSet)
-            pipe.execute()
-        else:
-            print "has paging!"
-            pipe.hset("paging_token",paging_token,int(time.time())+30*60)
-            pipe.card(pagingSet)
-            pipe.sort(pagingSet,desc=True,start=(page-1)*records,num=records)
-            result=pipe.execute()
-            totalRecords=result[1]
-            ret=list(result[2])
-        
+            ret=result[1]
         if len(ret)==0:
-            print "Return set is empty!"
-            return {}
-            
-        
-        recordList=proxy.records(ret,token)
-        print "Records:%s"%recordList
-        
-        paging['totalrecords']=totalRecords
-        remainder=totalRecords%records
-        if remainder>0:
-            paging['totalpages']=totalRecords/records+1
+            return None
+        else:        
+            #paging={}
+            paging['totalrecords']=totalRecords
+            remainder=totalRecords%records
+            if remainder>0:
+                paging['totalpages']=totalRecords/records+1
+            else:
+                paging['totalpages']=totalRecords/records
+            paging['paging_token']=paging_token
+            results={'paging':paging,'data':ret}
+            return results
+
+    @dcrator.timeit
+    def getAccessibleSet(self,accessible):
+        '''        
+        '''
+        tmpSet='tmp_%s'%str(uuid.uuid4())
+        sets=[]
+        for product in accessible:
+            sets.append('ids:i:android.os.Build.PRODUCT:%s'%product)
+        self.pipe.sunionstore(tmpSet,sets)
+        self.pipe.expire(tmpSet,60*5)
+        self.pipe.execute()
+        count=self.redis.scard(tmpSet)
+        #print count
+        if count==0:
+            return None
         else:
-            paging['totalpages']=totalRecords/records
-        paging['paging_token']=paging_token
-        
-        results={'paging':paging,'data':recordList}
-          
-        return results
+            return tmpSet
 
+    def needTimeFilter(self,conditions):
+        return (('starttime' in conditions) or ('endtime' in conditions))
 
+    @dcrator.timeit
+    def getTimeFilteredSet(self,conditions):
+        '''
+        Only the error set in the period.
+        Notice:zset has no proper xxxstore method, so the xxxrangexxx method must return the data to the caller. 
+        TODO: If server load is heavy, the tmp set can be buffered. name the set by time filter,
+        such as: tmp_error_1234567890_1234569000
+        '''
+        try:
+            if ('starttime' in conditions) ^ ('endtime' in conditions):
+                if 'starttime' in conditions:
+                    conditions['endtime']='%d'%(time.time())
+                else:
+                    conditions['starttime']=(datetime.fromtimestamp(float(conditions['endtime']))-timedelta(days=90)).strftime('%s')        
+            start=conditions.pop('starttime')
+            end=conditions.pop('endtime')
+        except Exception, e:
+            print e
+            return None
+
+        targetSet=self.redis.zrangebyscore('ss:ids:b',start,end)
+        tmpSet='tmp_error_%s-%s'%(start,end)
+
+        counter=0
+        for id in targetSet:
+            counter+=1
+            self.pipe.sadd(tmpSet,id)
+            if (counter%10000==0):
+                self.pipe.execute()
+        self.pipe.expire(tmpSet,60*5)#expire after 5 mins
+        self.pipe.execute()
+        count=self.redis.scard(tmpSet)
+        #print count
+        if count==0:
+            return None
+        else:
+            return tmpSet
     
     def export(user, password,product,start_date=None,end_date=None):
         '''
@@ -308,195 +322,94 @@ class Viewer(object):
         result=proxy.export(retset)    
         response.set_header("Content-Type","application/json")
         return result
-
-    
-    def getTimeFilteredSet(start,end,tmpSetName):
-        start=int(start)
-        end=int(end)
-        if start==0:
-            start=int(datetime.date(2012,1,1).strftime("%s"))
-        if end==0:
-            end=int(time.time())
-        aday=3600*24
-        sets=[]
-        
-        redis = brconfig.getRedis()
-        pipe = redis.pipeline(transaction=True)
-        
-        i=0
-        day=start
-        while(day<=end):
-            day=start+i*aday
-            datestr=date.fromtimestamp(day).strftime("%Y%m%d")
-            sets.append("ids:date:%s"%datestr)
-            i+=1
-        
-        if len(sets)>0:
-            pipe.sunionstore(tmpSetName,sets)
-            pipe.execute()
-            return tmpSetName
-        else:
-            return None   
             
-    
-    def product_summary(self,token,platform='4.0.4',callDropMode=False):
+    @dcrator.timeit
+    def product_summary(self,accessible,platform='4.0.4',callDropMode=False):
+        '''        
         '''
-        Give a summary for all the accessible products. The summary data can be error
-        rate or call drop rate.
-        @param token access token
-        @platform android platform version, like: 2.3.3, 2.3.7, 4.0.3 or 4.0.4 
-        @param mode work mode flag, whether error rate or call drop rate.
-        '''    
-        
-        #TODO: To optimize, error count, live time, call drop and call count can be computed before query.        
-          
-        #Get accessible product list    
-        result=getAccessibleProducts(token)
-        print "result:%s"%result
-        if result==None:
-            print "No accessible products!"
-            return {"error":"No accessible products!"}
-        if ('error' in result):
-            print "Error in result:%s"%result['error']
-            return result
-        products=result
-        
-        MAX_REVISION_COUNT=5    
-        redis = brconfig.getRedis()
-        pipe = redis.pipeline(transaction=True)
-            
-        errorSet='ids:e'#all errors without call drop
-        liveTimeSet='ids:s:com.borqs.bugreporter:LIVE_TIME'
-        callDropSet='ids:b:CALL_DROP'
-        callCountSet='ids:s:com.borqs.bugreporter:CALL_COUNT'
-        
-        tmp='tmp_%s'%uuid.uuid4()    
-        
-        #Get revision list for every products
-        platProducts=redis.smembers('set:%s:products'%platform)
-        products=set(products)&set(platProducts)
-        products=list(products)
-        products.sort()    
-        
+        MAX_REVISION_COUNT=10
+        accessibleProducts=accessible
+
+        rateLink="/api/brquery/query/rate?groupby=%s&android.os.Build.VERSION.RELEASE=%s&android.os.Build.PRODUCT=%s&mode=%s"
         if callDropMode:
             mode="calldrop"
-            sumKey="drop"
-            countSet=callDropSet
-            baseSet=callCountSet
+            multiplier=10
+            errorSet='ids:b:CALL_DROP'
+            baseSet='ids:s:com.borqs.bugreporter:CALL_COUNT'
+            revisionLink="/api/brquery/query/error?e_type=CALL_DROP&android.os.Build.VERSION.RELEASE=%s&android.os.Build.PRODUCT=%s&ro.build.revision=%s"
+            buildtimeLink="/api/brquery/query/error?e_type=CALL_DROP&android.os.Build.VERSION.RELEASE=%s&android.os.Build.PRODUCT=%s&android.os.Build.TIME=%s"      
         else:
             mode="error"
-            sumKey="error"
-            countSet=errorSet
-            baseSet=liveTimeSet
-        
-        revisions={}
-        pLength=len(products)
-        if pLength==0:
-            return []
-            
-        for product in products:        
-            revisionList=redis.sort('set:%s:%s:%s:revisions'%(platform,product,mode),alpha=True,desc=True)#why alpha=True?
-            #TODO: revisionList has at least one item, otherwise the product name will not be listed here.
-            sub=[]
-            length=min(MAX_REVISION_COUNT,len(revisionList))
-            for j in range(length):
-                sub.append(revisionList[j])
-                pipe.sinterstore(tmp,['ids:%s:%s:%s'%(platform,product,revisionList[j]),countSet])
-                pipe.sinter(['ids:%s:%s:%s'%(platform,product,revisionList[j]),baseSet])
-            revisions[product]=sub
-        pipe.delete(tmp)
-        ret=pipe.execute()
-        
-        #Get the count data; And save the part result to a temporary result set.
-        #TODO: Why use temporary result?
-        summary={} 
-        k=0
-        for product in products: 
-            sub=revisions[product]
-            total=0
-            subSummary={}
-            subSummary["product"]=product
-            subSummary["mode"]=sumKey
-            subSummary["sublist"]={}
-            length=min(MAX_REVISION_COUNT,len(sub))
-            for j in range(length):            
-                revision=sub[j]
-                subSummary["sublist"][revision]={}
-                subSummary["sublist"][revision]["revision"]=revision
-                errorOrDropCount=ret[k]
-                subSummary["sublist"][revision]["count"]=int(errorOrDropCount)
-                total+=errorOrDropCount
-                if callDropMode:
-                    listLink="/api/brquery/query/error?android.os.Build.VERSION.RELEASE=%s&sandroid.os.Build.PRODUCT=%s&ro.build.revision=%s&e_type=CALL_DROP"%(platform,product,revision)
-                else:
-                    listLink="/api/brquery/query/error?android.os.Build.VERSION.RELEASE=%s&android.os.Build.PRODUCT=%s&ro.build.revision=%s"%(platform,product,revision)
-                subSummary["sublist"][revision]["link"]=listLink
-                callOrLiveIdSet=list(ret[k+1])
-                if len(callOrLiveIdSet)==0:
-                    pipe.scard("ThisKeyWillNeverExist")#always return 0
-                else:
-                    pipe.hmget('s:values',callOrLiveIdSet)
-                k+=2        
-            subSummary["count"]=total
-            subSummary["link"]="/api/brquery/query/rate?groupby=ro.build.revision&android.os.Build.VERSION.RELEASE=%s&android.os.Build.PRODUCT=%s&mode=%s"%(platform,product,sumKey)
-            summary[product]=subSummary
-        ret=pipe.execute()
-        
-        #Get the base data(livetime or callcount), and compute rate.
-        k=0
-        for product in products: 
-            sub=revisions[product]
-            total=0
-            length=min(MAX_REVISION_COUNT,len(sub))
-            for j in range(length):
-                revision=sub[j]
-                valueSet=ret[k]
-                count=0
-                if valueSet:
-                    for value in valueSet:                    
-                        count+=int(value)                   
-                total+=count
-                if not callDropMode:
-                    count=count/3600
-                summary[product]["sublist"][revision]['base']=count
+            multiplier=6
+            errorSet='ids:e'
+            baseSet='ids:s:com.borqs.bugreporter:LIVE_TIME'
+            revisionLink="/api/brquery/query/error?android.os.Build.VERSION.RELEASE=%s&android.os.Build.PRODUCT=%s&ro.build.revision=%s"
+            buildtimeLink="/api/brquery/query/error?android.os.Build.VERSION.RELEASE=%s&android.os.Build.PRODUCT=%s&android.os.Build.TIME=%s"
+                    
+        tmp='tmp_%s'%uuid.uuid4()
+        productSet='ids:%s:%s'
                 
-                if count==0:
-                    summary[product]["sublist"][revision]['rate']='N/A'
-                else:
-                    summary[product]["sublist"][revision]['rate']='%s%%'%(summary[product]["sublist"][revision]['count']*100/count)            
-                k+=1
-            if not callDropMode:
-                total=total/3600
-            summary[product]['base']=total
-            if total==0:
-                summary[product]['rate']='N/A'
-            else:
-                summary[product]['rate']='%s%%'%(summary[product]['count']*100/total)        
-        pipe.execute()
+        platProducts=self.redis.smembers('set:%s:product'%platform)
+        products=list(set(accessibleProducts)&set(platProducts))
+        if len(products)==0:
+            return []
+        products.sort()        
         
-        #Format the result
-        result=[]
+        total=[]
         for product in products:
-            subSummary={}
-            subList=[]
-            subSummary["product"]=summary[product]["product"]
-            subSummary["mode"]=summary[product]["mode"]
-            subSummary["count"]=summary[product]["count"]
-            subSummary["base"]=summary[product]["base"]
-            subSummary["rate"]=summary[product]["rate"]
-            subSummary["link"]=summary[product]["link"]
+            errorCount=0
+            baseCount=0
+            productItem={}
+            productItem['product']=product
+            productItem['mode']=mode
+            if self.redis.exists('ss:%s:%s:revision'%(platform,product)):
+                verList=self.redis.zrevrangebyscore('ss:%s:%s:revision'%(platform,product),int(time.time()*1000),0,0,MAX_REVISION_COUNT)
+                linkTemplate=revisionLink
+                verKey='revision'
+                verSet='ids:i:ro.build.revision:%s'
+                groupBy='ro.build.revision'
+            else:
+                verList=self.redis.zrevrangebyscore('ss:%s:%s:buildtime'%(platform,product),int(time.time()*1000),0,0,MAX_REVISION_COUNT)
+                linkTemplate=buildtimeLink
+                verKey='buildtime'
+                verSet='ids:i:android.os.Build.TIME:%s'
+                groupBy='android.os.Build.TIME'
             
-            for revision in summary[product]["sublist"]:
-                subList.append(summary[product]["sublist"][revision])
-            subSummary["sublist"]=subList
-            result.append(subSummary)
-        
-        return result  
+            sublist=[]            
+            for ver in verList:
+                verItem={}
+                errorKeys=[productSet%(platform,product),verSet%ver,errorSet]
+                baseKeys=[productSet%(platform,product),verSet%ver,baseSet]
+                self.pipe.sinterstore(tmp,errorKeys)
+                self.pipe.sinterstore(tmp,baseKeys)
+                self.pipe.delete(tmp)
+                ret=self.pipe.execute()
+                verItem['count']=ret[0]
+                verItem['base']=ret[1]*multiplier 
+                errorCount+=ret[0]
+                baseCount+=ret[1]
+                if ret[1]==0:
+                    verItem['rate']='N/A'
+                else:
+                    verItem['rate']='%s%%'%(ret[0]*100/ret[1])
+                verItem[verKey]=ver#It's better to format it
+                verItem['link']=linkTemplate%(platform,product,ver)
+                sublist.append(verItem)
+            productItem['sublist']=sublist
+            productItem['count']=errorCount
+            productItem['base']=baseCount*multiplier
+            if baseCount==0:
+                productItem['rate']='N/A'
+            else:
+                productItem['rate']='%s%%'%(errorCount*100/productItem['base'])
+            productItem['link']=rateLink%(groupBy,platform,product,mode)
+            total.append(productItem)
+        self.redis.delete(tmp)        
+        return total
 
-    
+    @dcrator.timeit
     def rate_summary(self, conditions, group, show_error_type=True):
-        print "rate_summary()" 
-        t0=time.clock()
+        print "rate_summary()"         
         
         if 'token' in conditions:
             token=conditions.pop('token')
@@ -513,12 +426,12 @@ class Viewer(object):
         mode='error'
         if 'mode' in conditions:
             mode=conditions.pop('mode')
-        if mode!='drop':
+        if mode!='calldrop':
             mode='error'
             
             
-        r = brconfig.getRedis()
-        pipe = r.pipeline(transaction=True)
+        r = self.redis
+        pipe = self.pipe
         
         group_key = group
 
@@ -526,7 +439,7 @@ class Viewer(object):
         pipe.smembers('b:t')
         group_values, types = pipe.execute()
         
-        if mode=='drop':
+        if mode=='calldrop':
             types=['CALL_DROP']
         else:
             types=list(types)
@@ -546,7 +459,7 @@ class Viewer(object):
         if ntf:        
             timeFilteredSet=getTimeFilteredSet(starttime,endtime,timeFilteredSet)        
             if timeFilteredSet==None:
-                print "Get empty set after time filterd!"
+                #print "Get empty set after time filterd!"
                 return []#return empty set
             #print "Item count in filterd set:%s"%r.scard(timeFilteredSet)    
 
@@ -626,7 +539,6 @@ class Viewer(object):
             ret = show_error_type and ret[3+len(types):] or ret[4:]
             times = times[len(time_ids) and 1 or 0:]
         t4=time.clock()
-        print "t1=%s,t2=%s,t3=%s,t4=%s"%(t1-t0,t2-t1,t3-t2,t4-t3)
         return results
 
 
@@ -667,8 +579,8 @@ class Viewer(object):
         return errors
 
     #generate excel for error list
-    def error_list_excel(data):
-        datas=data['results']   
+    def error_list_excel(self,data):
+        #datas=data['results']   
         w = Workbook() 
         ws = w.add_sheet('error_list')
         #set content font
@@ -706,140 +618,23 @@ class Viewer(object):
         ws.write(0,3,'Name',style1) 
         ws.write(0,4,'Description',style1) 
         ws.write(0,5,'PhoneNumber',style1) 
-        ws.write(0,6,'Revision',style1)
-
-        for key in datas[0].keys():
-            print key
+        ws.write(0,6,'Revision',style1)        
             
         j = 1    
-        for record in datas:
+        for record in data:            
             ws.write(j,0,record['_id'],style) 
             ws.write(j,1,record['receive_time'],style)   
             ws.write(j,2,record['type'],style)  
             ws.write(j,3,record['name'],style) 
             ws.write(j,4,record['info'],style) 
-            ws.write(j,5,record['sys_info.phoneNumber'],style) 
-            ws.write(j,6,record['sys_info.ro:build:revision'],style)
+            ws.write(j,5,record['sys_info']['phoneNumber'],style) 
+            ws.write(j,6,record['sys_info']['ro.build.revision'],style)
             j=j+1 
         
-        response.set_header('Content-Type','application/vnd.ms-excel')
-        response.set_header("Content-Disposition", "attachment;filename=errorlist.xls");
+        #response.set_header('Content-Type','application/vnd.ms-excel')
+        #response.set_header("Content-Disposition", "attachment;filename=errorlist.xls");
         return w.get_biff_data()
-
-
-    def getAccessibleSet(token,tmpSetName,ids=None):
-        '''
-        Generate the accessible set for the given token, and return the temperorary set name.
-        The set should be remove after use. But if for the optimization reason, the 
-        remove can be delay. 
-        '''
-        products=getAccessibleProducts(token)
-        if ('error' in products):
-            print "getAccessibleSet encounter error:%s"%products
-            return products
-            
-        setName=generateSet(products,tmpSetName)
-        if setName==None:
-            print "Generate set fail!"
-            return None
-        
-        if ids==None:
-            return setName
-        else:
-            redis=brconfig.getRedis()
-            pipe=redis.pipeline(transaction=True)
-            
-            tmpIds="tmp_%s" % str(uuid.uuid4())
-            tmpResult="tmp_%s" % str(uuid.uuid4())
-            
-            for id in ids:
-                pipe.sadd(tmpIds,id)
-            
-            pipe.sinterstore(tmpResult,setName,tmpIds)
-            ret=pipe.execute()
-            
-            if (ret[-1]==0):
-                pipe.delete(tmpResult)
-                tmpResult=None
-                
-            pipe.delete(setName)
-            pipe.delete(tmpIds)
-            pipe.execute()
-            
-            return tmpResult
-        
     
-    def getAccessibleProducts(token):
-        '''
-        Get accessible products for the given token.
-        '''
-        #print "getAccessibleProducts(%s)"%token
-        
-        url=brconfig.BRAUTH+"/accessible_products?token="+token
-        f = urllib2.urlopen(url)
-        msg=None
-        try:
-            msg=json.loads(f.readline())
-            print "msg:%s"%msg 
-        except Exception, e:
-            return {"error":"%s"%e}
-        
-        print "msg:%s"%msg['results'] 
-        msg=json.loads(msg['results'])
-        if 'products' in msg:
-            return msg["products"]
-        elif 'error' in msg :
-            return msg
-        else:
-            return {"error":"Unknown error!"}
-            
-    def generateSet(products,tmpSetName):
-        '''
-        Generate a temporary union set for the given products list.
-        '''
-        print "generateSet()"
-        
-        if len(products)==0:
-            print "Parameter(products) is empty!"
-            return None
-        
-        redis = brconfig.getRedis()
-        pipe = redis.pipeline(transaction=True)    
-        
-        sets=[]
-        for p in products:
-            sets.append("ids:i:android.os.Build.PRODUCT:%s"%p)
-            
-        pipe.sunionstore(tmpSetName,sets)
-        ret=pipe.execute()
-        
-        if ret[0]==0:
-            redis.delete(tmpSetName)
-            print "Generated an empty set!"
-            return None
-        else:  
-            return tmpSetName
-
-    def isAccessible(token,record_id):
-        '''
-        Not a good implementation.
-        '''
-        tmpSetName='tmp_%s'%str(uuid.uuid4())
-        tmpSetName=getAccessibleSet(token,tmpSetName)
-        
-        if tmpSetName == None:
-            return False
-        else:
-            redis=brconfig.getRedis()
-            pipe = redis.pipeline(transaction=True)
-            pipe.sismember(tmpSetName,record_id)
-            pipe.delete(tmpSetName)
-            ret=pipe.execute()
-            
-            if ret[0]:
-                return True
-            else:
-                return False
 
     def get_accessible_ids(token,ids=None):
         tmpSetName='tmp_%s'%str(uuid.uuid4())
@@ -851,7 +646,8 @@ class Viewer(object):
             ret_ids=redis.smembers(tmpSetName)
             redis.delete(tmpSetName)
             return ret_ids
-        
+    
+
     def summary(self,conditions):
         '''        
         '''
@@ -956,7 +752,7 @@ class Viewer(object):
             keyName=backupKeyName        
             ret=self.redis.exists(keyName)
             if not ret:
-                return {"error":"No data for the given number."}
+                return {"error":{'code':0,'msg':"No data for the given number."}}
 
         end=int(date.today().strftime('%s'))+3600*24
         start=end-3600*24*30
@@ -972,51 +768,44 @@ class Viewer(object):
         if len(ll)!=0:
             lMin=ll[0]
         if eMin==-1 and lMin==-1:
-            return {"error":"No data for recent 30 days."}
+            return {"error":{'code':0,'msg':"No data for recent 30 days."}}
 
         minId=min(int(eMin),int(lMin))
 
         ids=self.redis.sort(keyName)
         if len(ids)==0:
-                return {"error":"No data for the given number."}
+                return {"error":{'code':0,'msg':"No data for the given number."}}
         try:
             while(int(ids[0])<minId):
                 ids.pop(0)
         except:
-            return {"error":"No data for the given number in recent 30 days."}
+            return {"error":{'code':0,'msg':"No data for the given number in recent 30 days."}}
         return ids      
 
 
 
     '''    
-    *???*
+    ********************************************************************************************************************************
     '''
-    def info_release_product(self,accessible):
-        redis = self.redis
-        pipe = self.pipe
-        
-        platforms=self.platforms()
-        
-        for platform in platforms:
-            pipe.smembers('set:%s:products'%platform)
-        ret=pipe.execute()
-        
-        results={}
-        i=0
-        for platform in platforms:
-            l=list(set(products)&set(ret[i]))
-            if (len(l)>0):
-                results[platform]=l
-            i+=1
-        
-        return results           
+             
+    
+    '''    
+    ********************************************************************************************************************************
+    '''
 
 if (__name__ == '__main__'):
     viewer=Viewer()
     #ret=viewer.getMonthData('201302')
     #ret=viewer.getYearData('2013')
-    ret=viewer.getUserData(phonenumber='18612345678')
-    print len(ret)
+    #ret=viewer.getUserData(phonenumber='18612345678')
+    accessible=['BP710A','yukkabeach','BKB','AZ210A',"RHB","THTEST"]
+    platform='4.1.2'
+    callDropMode=False
+    #ret=viewer.product_summary(accessible,platform)
+    #print len(ret)
+    #conditions={'endtime':'1356969600'}#,'endtime':'1362844800'}
+    #ret=viewer.getTimeFilteredSet(conditions)
+    ret=viewer.getAccessibleSet(accessible)    
     print ret
 
 

@@ -116,6 +116,7 @@ var renderingList = function(data) {
 function createListGrid(){	
 
     $("#summarylist").empty();  
+
     gerrorcondition = window.location.search.substring(1);       
     var listv=gerrorcondition.split("&");    
     for(i=0;i<listv.length;i++){
@@ -180,9 +181,8 @@ function getErrorList(json){
 }
 
 
-function exportExcel(){
-	
+function exportExcel(){	
     $("#export").click(function(){
-        //window.open(window.location.protocol+"//"+window.location.host+"/api/brquery/query/error/download?"+gerrorcondition+"&"+ticketcondition());      
+        window.open(window.location.protocol+"//"+window.location.host+"/api/brquery/query/error/excel?"+gerrorcondition+"&"+ticketcondition());      
     })  
 }

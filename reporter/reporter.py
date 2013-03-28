@@ -3,6 +3,7 @@ import json
 import datetime,time
 
 from db import dbHelper
+import dcrator
 
 '''
 Author: Chen Jiliang
@@ -20,7 +21,7 @@ class Reporter(object):
         self.fs=dbHelper.gridFS
         if self.fs==None:
             raise Exception('Get GridFS fail!')
-        self.redis=dbHelper.redisDB
+        #self.redis=dbHelper.redisDB
 
 #################################################################################################################
     '''
@@ -73,23 +74,30 @@ class Reporter(object):
         if document.has_key('occur_time'):
             document['occur_time']=str(document['occur_time'])
         if document.has_key('receive_time'):
-            document['receive_time']=document['receive_time'].strftime("%m-%d %H:%M:%S")
+            document['receive_time']=document['receive_time'].strftime("%Y-%m-%d %H:%M:%S")
         if document.has_key('info'):
             document['info']=document["info"][:37]
+        if 'sys_info' in document:
+            si=document.pop('sys_info')
+            sysInfo={}
+            for key in si:
+                rKey=key.replace(':','.')
+                sysInfo[rKey]=si[key]
+            document['sys_info']=sysInfo
         #return json.dumps(document)
         return document
 
 #################################################################################################################
     ###########Add related routing###################
     
-    def report_post(self,dataTypes,recordId,body,json):
+    def report_post(self,dataTypes,recordId,body,json_data):
         '''
         HTTP POST to upload a report string or data file
         '''  
         result='Illegal data'      
         if 'application/json' in dataTypes:        
-            if json!=None:
-                result=self.addReport(json)
+            if json_data!=None:
+                result=self.addReport(json_data)
         elif 'text/plain' in dataTypes:
             data = json.loads(body.read())
             if data!=None:
@@ -117,6 +125,7 @@ class Reporter(object):
         original_data=self.db['original_data']
         report_data=self.db['report_data']
 
+        '''
         if self.redis!=None:
             recordId=redis.hget('uuid',info['uuid'])
             if recordId!=None:
@@ -130,6 +139,11 @@ class Reporter(object):
                 record=report_data.find_one({'uuid':info['uuid']})
             if record!=None:
                 return {'id':int(record['_id'])}
+        '''
+
+        record=report_data.find_one({'uuid':info['uuid']})
+        if record!=None:
+            return {'id':int(record['_id'])}
         
         receive_time=datetime.datetime.now()
         sysInfo={}
@@ -149,10 +163,10 @@ class Reporter(object):
         recordId=self.getCounter(self.db)            
         original_data.insert({"_id":recordId,"json_str":json.dumps(info),"receive_time":receive_time,"uuid":info['uuid']})
         report_data.insert({"_id":recordId,"category":info['category'],"type":info['bug_info']['bug_type'],"name":name_value,"info":info_value,"occur_time":info['bug_info']['time'],"uuid":info['uuid'],"receive_time":receive_time,"sys_info":sysInfo})
-        if self.redis!=None:
-            redis.hset('uuid',info['uuid'],recordId)
+        # if self.redis!=None:
+        #     redis.hset('uuid',info['uuid'],recordId)
             
-        return {'id':int(record_id)}
+        return {'id':int(recordId)}
 
     #@timeit
     def uploadFile(self,recordId,body):
@@ -187,7 +201,7 @@ class Reporter(object):
         record=report.find_one({"_id":int(record_id)})
         if record==None:
             record={}
-        return {"results":self.serialize(record)}
+        return self.serialize(record)
 
     def getData(self,record_id):
         '''
@@ -208,23 +222,13 @@ class Reporter(object):
         '''
         Get log file for report.
         '''        
-        ##print 'querylog()'                
-        #db=self.getDB()
         report=self.db["report_data"]    
         record=report.find_one({"_id":int(record_id)});
-        if record==None:
-            abort(400,'No record found!') 
-        elif ("log" not in record):
-            abort(400,"No log file!")
-        else: 
-            #fs=self.getfs()
-            if not self.fs.exists(record['log']):
-                abort(400,'File not found!')
-            else:
-                log=self.fs.get(record['log'])
-                response.set_header('Content-Type','application/x-download')
-                response.set_header('Content-Disposition','attachment; filename=log_'+record_id+'.zip',True)
-                return log 
+        if not record is None:
+            if 'log' in record:
+                if self.fs.exists(record['log']):
+                    return self.fs.get(record['log'])
+        return None        
     
     def get_file(self,fileId): 
         '''
@@ -242,6 +246,7 @@ class Reporter(object):
             return {"error":"File doesn't exists for the given file id."}
                 
     #TODO: How about when the set is extremly large?>1000
+    @dcrator.timeit
     def get_batch_report(self,record_ids):
         '''
         Retrieve a batch of report data for the given id array.
@@ -249,14 +254,17 @@ class Reporter(object):
         report_data=self.db["report_data"]
         ids=[]
         for id in record_ids:
-            ids.append(int(float(id)))
+            try:
+                ids.append(int(id))
+            except:
+                pass
         records=report_data.find({"_id":{"$in":ids}},{"_id":1,"type":1,"name":1,"info":1,"receive_time":1,"sys_info.ro:build:revision":1,"sys_info.phoneNumber":1,"ticket_url":1})
         ret=[] 
         for record in records:
             ret.append(self.brief(record))
             
-        return json.dumps(ret)#TODO dumps() or not dumps() is a problem!
-    
+        #return json.dumps(ret)#TODO dumps() or not dumps() is a problem!
+        return ret
 
     def old_export(self):
         '''
@@ -395,10 +403,10 @@ class Reporter(object):
         response.set_header("Content-Type","application/json")
         return {"start":idstart,"end":idend}
         
-    def latest(self):
+    def latest(self,limit):
         '''
         '''
-        count=request.params.get("count")
+        count=limit
         if not count:
             count=20
         else:
@@ -409,7 +417,7 @@ class Reporter(object):
                 count=100
                     
         report=self.db.report_data
-        cursor=report.find({}).sort("_id",pymongo.DESCENDING).limit(count)
+        cursor=report.find().sort("_id",-1).limit(count)
         ret=[]
         for doc in cursor:
             product="Unknown"
@@ -420,7 +428,7 @@ class Reporter(object):
                 phone_number=doc['sys_info']['phoneNumber']
             ret.append({"_id":int(doc['_id']),"category":doc['category'],"type":doc['type'],"name":doc['name'],"info":doc['info'],"receive_time":doc['receive_time'].strftime("%Y-%m-%d %H:%M:%S"),"product":product,"phone_no":phone_number})
         ##print "Not dumps result"
-        return {'results':ret}
+        return ret
         
     ###########Delete related routing###################
 

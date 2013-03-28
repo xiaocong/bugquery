@@ -53,8 +53,8 @@ def validate():
                 return {"results":{"error":{"code":12,"msg":"Invalid token"}}}
             else:
                 uid=brauth.validateToken(token)
-                print "token:%s"%token
-                print "uid:%s"%uid
+                #print "token:%s"%token
+                #print "uid:%s"%uid
                 if uid==-1:
                     return {"results":{"error":{"code":12,"msg":"Invalid token"}}}
                 else:
@@ -94,7 +94,7 @@ def auth():
     curl -H "Content-Type:application/json" -d "{\"username\":name,\"password\":pass}" http://localhost/api/brauth/auth
     
     '''
-    print "api.auth()"
+    #print "api.auth()"
     data=request.json
     username=data["username"]
     password=data["password"]
@@ -259,7 +259,7 @@ def changePassword():
     if info==None:
         return {'results':{"error":{"code":11,"msg":"Authentication fail"}}}
     else:
-        print "name:%s,pass:%s"%(username,newpass)
+        #print "name:%s,pass:%s"%(username,newpass)
         brauth.setPass(username,newpass)
         #response.set_header("Content-Type","application/json")
         return {'results':'OK'}
