@@ -94,7 +94,7 @@ class Reporter(object):
         '''
         HTTP POST to upload a report string or data file
         '''  
-        result='Illegal data'      
+        result={'error':'Illegal data'}
         if 'application/json' in dataTypes:        
             if json_data!=None:
                 result=self.addReport(json_data)
@@ -112,34 +112,18 @@ class Reporter(object):
         '''
         HTTP PUT to upload a data file
         '''
-        result='Illegal data'
+        result={'error':'Illegal data'}
         if recordId!=None:
             result=self.uploadFile(recordId,body)            
         return result
     
-    
+    @dcrator.timeit
     def addReport(self,info):
         '''
         Add report
         ''' 
         original_data=self.db['original_data']
-        report_data=self.db['report_data']
-
-        '''
-        if self.redis!=None:
-            recordId=redis.hget('uuid',info['uuid'])
-            if recordId!=None:
-                return {'id':int(recordId)}
-        else:
-            maxId=self.getMaxId(self.db)
-            exists=None
-            if maxId!=-1:
-                record=report_data.find_one({'uuid':info['uuid'],'_id':{'$gt':maxId-100000,'$lt':maxId}})
-            else:
-                record=report_data.find_one({'uuid':info['uuid']})
-            if record!=None:
-                return {'id':int(record['_id'])}
-        '''
+        report_data=self.db['report_data']        
 
         record=report_data.find_one({'uuid':info['uuid']})
         if record!=None:
@@ -163,27 +147,25 @@ class Reporter(object):
         recordId=self.getCounter(self.db)            
         original_data.insert({"_id":recordId,"json_str":json.dumps(info),"receive_time":receive_time,"uuid":info['uuid']})
         report_data.insert({"_id":recordId,"category":info['category'],"type":info['bug_info']['bug_type'],"name":name_value,"info":info_value,"occur_time":info['bug_info']['time'],"uuid":info['uuid'],"receive_time":receive_time,"sys_info":sysInfo})
-        # if self.redis!=None:
-        #     redis.hset('uuid',info['uuid'],recordId)
-            
+                    
         return {'id':int(recordId)}
 
-    #@timeit
+    @dcrator.timeit
     def uploadFile(self,recordId,body):
         '''
         Upload file
         '''
-        result='Fail to upload file.'
+        result={'error':'Fail to upload file.'}
         report_data=self.db['report_data']
         record=report_data.find_one({'_id':int(recordId)})
         if record==None:
-            result='No record found for the given record id!'
+            result={'error':'No record found for the given record id!'}
         else:
             fileId=None
             try:       
                 fileId=self.fs.put(body)
                 report_data.update({"_id":int(recordId)},{'$set':{'log':fileId}})
-                result='File uploaded.'        
+                result={'id':int(recordId)}
             except Exception,e:
                 print e
         return result

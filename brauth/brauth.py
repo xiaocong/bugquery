@@ -351,10 +351,10 @@ def setPass(username,password):
 
 
 def sendMail(receiver,user,password):  
-    sender = 'jiliang.chen@borqs.com'  
+    sender = 'bugquery@borqs.com'  
     subject = 'Your account for BugReporter server has been initialized'  
-    mailuser = 'jiliang.chen@borqs.com'
-    mailpass = 'java5i'  
+    mailuser = 'bugquery@borqs.com'
+    mailpass = '!QAZ2wsx3edc'
       
     msg = ("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n" % (sender, receiver,subject))
     msg=msg+'Hi:\r\n'

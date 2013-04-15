@@ -8,6 +8,7 @@ import dcrator
 import uuid
 from time import time
 from datetime import datetime,timedelta
+import mantis
 
 '''
 Author: Chen Jiliang
@@ -23,7 +24,7 @@ viewer=Viewer()
 ###########API for add data###################
 @app.route('/report',method='GET')# Only for test
 def report_test():
-    return 'Test Only'
+    return 'BugReporter Server Works!'
 
 @app.route('/report',method='POST')
 def report_post():
@@ -38,7 +39,10 @@ def report_post():
     recordId=request.get_header('record-id')        
     result=reporter.report_post(dataTypes,recordId,request.body,request.json)
     
-    return result
+    if 'error' in result:
+        abort(500,result['error'])
+    else:
+        return result
 
 @app.route('/report',method='PUT')
 def report_put():
@@ -52,8 +56,10 @@ def report_put():
     recordId=request.get_header('record-id') 
     reporter=Reporter()       
     result=reporter.report_put(dataTypes,recordId,request.body)
-    
-    return result
+    if 'error' in result:
+        abort(500,result['error'])
+    else:
+        return result
 
 '''    
 @app.route('/record/<record_id>/log',method='PUT')
