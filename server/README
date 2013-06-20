@@ -1,0 +1,51 @@
+=======
+INSTALL
+=======
+1. Install pip in case you didn't
+$ sudo aptitude install python-pip
+
+2. Install bottle via pip
+$ sudo pip install bottle
+
+The you can run your bottle app like below:
+$ python bugreport_app.py
+
+You can test your server like below:
+$ curl -0 localhost:8080/ping
+
+Notes: The default bottle application only supports single thread response, so if there are multiple
+asynchronized requests in your development, you should wrap bottle app with other WSGI apps supporting
+multi-threads, or connect bottle with apache via mod_wsgi.
+
+===============
+Run with apache
+===============
+1. Install apache.
+$ sudo aptitude install apache2
+
+2. Install mod_wsgi
+$ sudo aptitude install libapache2-mod-wsgi
+
+3. Enable mod_wsgi
+$ sudo a2enmod wsgi
+
+4. Copy all files in the folder into /path/to/bugreport/
+
+5. Modify apache site config file, most likely it is at /etc/apache2/sites-available/default
+   and add below lines.
+
+6. Reload apache2
+$ sudo /etc/init.d/apache2 reload
+
+<VirtualHost *:80>
+        #-----add below lines----------
+	WSGIDaemonProcess bugreport user=www-data group=www-data processes=2 threads=10
+        WSGIScriptAlias /bugreport /path/to/bugreport/bugreport.wsgi
+        <Directory /path/to/bugreport/>
+                WSGIProcessGroup bugreport
+                WSGIApplicationGroup %{GLOBAL}
+                Order deny,allow
+                Allow from all
+        </Directory>
+	#-----end-----------
+</VirtualHost>

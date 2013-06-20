@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+     <head>
+        <title>Bugreport</title>
+        <link href="kendo/styles/kendo.common.min.css" rel="stylesheet"/>
+        <link href="kendo/styles/kendo.default.min.css" rel="stylesheet"/>
+        <link href="styles/bootstrap.css" rel="stylesheet"/>        
+               
+        <script src="kendo/js/jquery.min.js"></script>
+        <script src="js/jquery.cookie.js"></script>        
+        <script src="js/json2.js"></script> 
+        <script src="js/data_global.js"></script>                               
+    </head>
+
+    <body>  
+        <div align="center" class="k-header">
+        	<h2>BORQS BugQuery System</h2>
+        </div>
+                  	
+        <div id="loginform" align="center" style="margin-top: 60px">
+            <table id="auth_info" class="k-widget k-grid">     
+            	
+               <tr class="k-grid-header" ><td class="category">Authorization Mode</td>
+               	<td>
+              	   <input type="radio" name="authmode" value="BorqsBtAccount" onclick="checkBT()" id="radiobt">BorqsBT Account               		
+			       <input type="radio" name="authmode" value="LocalAccount" onclick="checkBQ()" id="radiobq">BugQuery Account
+              </td>
+               </tr>	            	
+            	
+            	   	                            
+               <tr class="row-2" >
+               	<td class="k-grid-header">ServerName</td>
+               	<td>
+				   <select tabindex="1" name="category" id="btServerName" onchange="InitBTValues()">
+			       <!--option value="all">all</option-->
+			       <option value="borqsbt">borqsbt</option>
+			       <option value="borqsbt2">borqsbt2</option>
+			       <option value="borqsbtx">borqsbtx</option>			       			       
+			       </select>               	
+                </td>
+               </tr>	      
+                            	
+               <tr class="row-2" >
+               	<td class="k-grid-header">UserName</td>
+               	<td><input type="text" id="btUserName" onkeyup="DoAction(event)"/></td>
+               </tr>
+                           		                 	
+               <tr class="row-2"  >
+               	<td class="k-grid-header">Password</td>
+               	<td><input type="password" id="btUserPswd"  onkeyup="DoAction(event)"/></td>
+               </tr>
+               
+               
+               <tr class="row-2" >
+               	  <td align="center" colspan="2">				   
+                    <input type="button" value="login" align="center" onclick="loginAction()"/>				   
+			             </td>
+			         </tr>	        		                 	  			  			               
+            </table>
+      </div>  
+     
+     <br /> 
+	<hr size="1" style="margin-top: 60px"/>
+	
+    <table align="center" style="border: none">
+	    <tr align="center">
+	    	<td>
+	    		<address>Copyright &copy; 2007 - 2012 Borqs.co</address>
+	    		<address><a href="mailto:jiliang.chen@borqs.com">contact us</a></address>
+            </td>
+            <td>
+              <div align="right"><a href="https://www.borqs.com" title="Borqs Bug Query"></a></div>
+            </td>
+        </tr>
+    </table>      
+                   
+    <script>     
+    
+        $(document).ready(function(){
+        	$('#radiobt').attr('checked',true);
+        	InitBTValues();
+        });   
+        
+        function DoAction(env)
+        {
+			//do login if press enter key
+			if (env.keyCode == 13) loginAction();
+        }
+                      
+        function InitBTValues()
+        {	  	
+	         $('#btUserName').val('');
+	         $('#btUserPswd').val('');        	
+	         if(($.cookie('btUserName_'+$('#btServerName').val()) !== '' && $.cookie('btUserName_'+$('#btServerName').val()) !== null)
+	           && ($.cookie('btUserPswd_'+$('#btServerName').val()) !== '' && $.cookie('btUserPswd_'+$('#btServerName').val()) !== null))
+	         {
+	             $('#btUserName').val($.cookie('btUserName_'+$('#btServerName').val()));
+	             $('#btUserPswd').val($.cookie('btUserPswd_'+$('#btServerName').val()));		    		
+	         }
+	         
+	         $('#btUserName').focus();
+        }        
+        
+        function InitBQValues()
+        {	  	
+	         $('#btUserName').val('');
+	         $('#btUserPswd').val('');        	
+	         if(($.cookie('bqUserName') !== '' && $.cookie('bqUserName') !== null)
+	           && ($.cookie('bqUserPswd') !== '' && $.cookie('bqUserPswd') !== null))
+	         {
+	             $('#btUserName').val($.cookie('bqUserName'));
+	             $('#btUserPswd').val($.cookie('bqUserPswd'));		    		
+	         }
+	         $('#btUserName').focus();	         
+        }         
+        
+        //check bugquery auth
+        function checkBQ()
+        {
+	        $('#btServerName').hide();	
+	        InitBQValues();        	        	
+        }
+       
+        //check mantis server auth 
+        function checkBT()
+        {
+	        $('#btServerName').show();        	
+            InitBTValues();
+        }        
+        
+        function loginAction()       
+        {         
+        	var server = $('#btServerName').val();
+        	if($('#btServerName').is(":hidden"))
+            {
+                server = ''; 
+        	}
+        	         	  	                           		
+            if(loginauth($('#btUserName').val(),$('#btUserPswd').val(),server))
+            {
+        	    if($('#btUserName').val() === 'admin')
+        	        window.location = "managecenter.html";  	  
+        	    else {
+        	        if($.cookie('url_redirect') !== null && $.cookie('url_redirect') !== '')
+        	            window.location = $.cookie('url_redirect') ;  
+        	        else 
+        	            window.location = "index.html";         	                
+        	    }              	
+            }        	            	      	
+        }
+   </script>          
+   </body>
+</html>
+

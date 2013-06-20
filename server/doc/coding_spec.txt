@@ -1,0 +1,24 @@
+
+前端开发的规范：
+    1.目录结构:
+    ├── index.html
+    ├── list.html
+    ├── detail.html
+    ├── js/
+    ├── styles/
+    └── kendo/
+
+    2. html代码与JavaScript代码分离
+    
+    3.JavaScript代码组织原则：
+       每个html定义一个js文件，包含页面的所有js代码，命名规则为：data_**.js, **为html的名字。
+
+后端开发的规范：
+    Python的注释
+    API与实现分离
+
+
+
+
+
+
