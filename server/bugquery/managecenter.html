@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Manager Center</title>    
+    <link href="kendo/styles/kendo.common.min.css" rel="stylesheet"/>
+    <link href="kendo/styles/kendo.default.min.css" rel="stylesheet"/>   
+    <link href="styles/bootstrap.css" rel="stylesheet"/> 
+    <link href="styles/jquery-ui-1.8.16.custom.css" rel="stylesheet"/>           
+    <link href="styles/style.css" rel="stylesheet"/>  
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="js/html5.js"></script>
+    <![endif]-->
+</head>
+
+<body>	
+    <header>
+        <div class="sfContentBlock">
+            <h2>BugQuery</h2>
+            <div class="navbar pull-right" style="margin-top:18px;font-size:14px">
+                <ul class="nav">
+                    <li><a class="navbar-text" href="javascript:changepswd();" id="loggedid"></a></li>
+                    <li><a class="navbar-text" href="javascript:logout();">Logout</a></li>
+                </ul>
+            </div> 
+        </div>
+    </header>
+    
+    <nav class="greyback">          
+        <ul>
+            <li id="tabindex" class="first-child"><a href="index.html"></a></li> 
+            <li class="" id="tabusr"> <a href="javascript:GetGridUsers()">Uers</a></li>
+            <li class="active" id="tabprd"><a href="javascript:GetGridProducts()">Products</a></li>
+        </ul>
+    </nav> 	
+	
+    <div id="main">
+        <div id="divuser" style="padding:1px 25px 25px 25px;">
+            <div id="usergrid" style="float:left;margin-top:5px;margin-bottom:5px;width:50%"></div>      
+            <div id="rightsgrid" style="float:left;margin-top:5px;margin-bottom:5px;margin-left:10px;width:40%">
+            </div>     
+        </div>
+
+        <div id="divproduct" style="padding:1px 25px 25px 25px;">
+            <div id="productgrid" style="float:left;margin-top:5px;margin-bottom:5px;width:50%"></div>      
+            <div id="mappinggrid" style="float:left;margin-top:5px;margin-bottom:5px;margin-left:10px;width:40%">
+            </div>     
+        </div>                  
+    </div> 
+
+    <script src="kendo/js/jquery.min.js"></script>       
+    <script src="kendo/js/kendo.all.min.js"></script> 
+    <script src="kendo/js/kendo.grid.min.js"></script>      
+    <script src="js/json2.js"></script>  
+    <script src="js/jquery.cookie.js"></script>       
+    <script src="js/data_global.js"></script>  
+    <script src="js/data_manage.js"></script>     
+    <script type="text/javascript">
+        if(($.cookie('bqticket') === null) || ($.cookie('bqticket') === '')) {
+            window.location = "login.html";
+        }                         
+        $(document).ready(function() {
+             //GetGridProducts();
+             GetGridUsers();
+             getBQProducts();
+        });
+    </script>
+</body>
+
+</html>

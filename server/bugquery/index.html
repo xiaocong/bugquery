@@ -1,0 +1,458 @@
+<!doctype html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Bugreport</title>
+        <link href="kendo/styles/kendo.common.min.css" rel="stylesheet"/>
+        <link href="kendo/styles/kendo.default.min.css" rel="stylesheet"/>     
+        <link href="styles/bootstrap.css" rel="stylesheet"/> 
+        <link href="styles/jquery-ui-1.8.16.custom.css" rel="stylesheet"/>     
+        <link href="styles/ui.daterangepicker.css" rel="stylesheet"/>               
+        <link href="styles/style.css" rel="stylesheet"/>
+        <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+        <!--[if lt IE 9]>
+            <script src="js/html5.js"></script>
+        <![endif]-->        
+    </head>
+
+    <body>
+
+    <header>
+        <div class="sfContentBlock">
+            <h2>BugQuery</h2>
+            <div class="navbar pull-right" style="margin-top:18px;font-size:14px">
+                <ul class="nav">
+                    <li><a class="navbar-text" href="javascript:changepswd();" id="loggedid"></a></li>
+                    <li><a class="navbar-text" href="javascript:logout();">Logout</a></li>
+                </ul>
+            </div> 
+        </div>
+
+        <div id="dlgpswd" style="display:none;padding-top:5px;font-size:14px">
+            <table>
+               <tr class="row-2"  >
+               	 <td class="k-grid-header">Old Password</td>
+               	 <td><input type="password" id="txtoldpswd"/></td>
+               </tr>
+
+               <tr class="row-2"  >
+               	 <td class="k-grid-header">New Password</td>
+               	 <td><input type="password" id="txtnewpswd"/></td>
+               </tr>
+
+               <tr class="row-2"  >
+               	 <td class="k-grid-header">Confirm Password</td>
+               	 <td><input type="password" id="txtcfmpswd"></td>
+               </tr>  
+
+               <tr class="row-2" >
+               	  <td align="center" colspan="2">				   
+                    <input type="button" value='OK' align="center" onclick="dochnpswd()"/>   
+			      </td>
+			   </tr>	            
+        	</table>
+        </div>
+	</header>
+	
+	<nav class="greyback">			
+        <ul>
+	        <li id="tabindex" class="first-child"><a href="index.html"></a></li>        	
+	        <li id="tabstatic" class="active"><a href="javascript:showSummary()">Statistics</a></li>
+	        <li id="tabsearch" class=""><a href="javascript:showSearch()">Search</a></li>
+	        <li id="tablivetime" class=""><a href="javascript:showLivetime()">Monitor</a></li>
+	    </ul>
+	    <div id="menu">
+            <div id="searchContainer">
+                <input type="text" id="searchTextBox" onkeyup="onKeyAction(event)" class="sfsearchTxt" placeholder="search by issue id..." />
+                <div class="sfSearchImageContainer">
+                    <input type="submit" onclick="gotoRecord()" value="" id="searchButton" title="Search" class="sfsearchSubmit button" />
+                    <img src="./styles/images/google-search-button.png" alt="search" class="sfSearchSubmit-top" />
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div id="main">			         
+		<div id="img" style="position:absolute;z-index: 1;"></div>
+		<div id="divstatic" style="padding-bottom: 10px">  
+			<div class="nav-tabs" style="padding:1px 25px 5px 25px;">	
+                <div id="radioset" class="pull-right" style="margin-top: 10px; margin-bottom: 5px">
+                    <input type="radio" id="radioerror" name="radio" checked="checked"/>
+                    <label for="radioerror">ErrorRate</label>
+                    <input type="radio" id="radiodrop" name="radio"/>
+                    <label for="radiodrop">DropRate</label>
+                </div>  
+				<ul class="pull-left" style="margin-top: 16px">
+				    <a id="lnkplatform" href="javascript:showProductSummary()"></a>
+				    <span id="lnkbr"> >> </span>
+				    <a id="lnkproduct" href="javascript:showProductRates()"></a>
+				</ul>                      						        	
+		    </div>					    	
+            <div id="divsummary" style="padding:1px 25px 5px 25px;"> 
+		        <table>
+		            <tr>
+		                <td>Platform Version:</td>        
+		                <td><input id="platlist" style="width:200px;padding: 4px 10px;" /></td>
+		            </tr>    			                	
+		        </table>   	          	
+                <div id="summarygrid"></div>           
+            </div>	     				    	
+            <div id="diverrors" style="display: none; padding:1px 25px 5px 25px;">           
+		        <table>
+		            <tr>
+		                <td>ErrorRate Groupby:</td>        
+		                <td><input id="grouplist" style="width:210px"/></td>
+		                <td>&nbsp&nbsp&nbsp&nbsp</td>	
+		                <td>Filter By DateRange:</td>
+		                <td>
+                            <input type="text" id="start" style="width:93px"/>
+                            <input type="text" id="end"  style="width:93px" />
+		                </td>		                      	
+		                <td>
+		                    <button class="btn " id="getsearch" onclick="javascript:gotoErrorFilter()"><strong>Filter</strong></button>
+		                    <button class="btn " id="getall" onclick="javascript:gotoAllFilter()"><strong>Clear</strong></button>            	
+		                </td> 		  	                		
+		            </tr>
+		        </table>
+                <div id="errorsgrid"></div> 
+            </div>             
+		</div>
+	            	           	           
+		<div id="divsearch"  class='wellx' style="display: none;padding-bottom: 10px">	 
+		    <div class="nav nav-tabs" style="padding:1px 25px 5px 25px;">
+                <div id="radiosearch" class="pull-right"  style="margin-top: 10px; margin-bottom: 5px">
+                    <input type="radio" id="radioquick" name="radio1" checked="checked"/><label for="radioquick">Quick&nbsp;&nbsp;&nbsp;</label>
+                    <input type="radio" id="radioadvanced" name="radio1" /><label for="radioadvanced">Advanced</label>
+                </div>                       						        	
+		    </div>				       
+				       			    	    		               			                              	               
+		    <div style="padding:1px 25px 5px 25px ;">              	
+		        <div id="divSimpleSearch"> 		               	
+		            <table>
+		               	<tr>   
+		               	    <td>Product:</td>		               	       	
+		               	    <td><input id="prodlists" style="width:210px" /></td>	
+		               	    <td colspan="2"></td>                 
+		                    <td><input type="checkbox" id="chks">DateRange:</td>
+		                    <td><input type="text" id="starts" style="width:93px" />
+		                    <input type="text" id="ends" style="width:93px"/></td>	
+		                </tr> 			                    		                    	
+		                <tr>
+		                    <td> PhoneNumber:</td>         
+		                    <td><input id="phonenumber" style="width:200px"/></td>   
+		                    <td><button class="btn " id="btnnumber" onclick="goToPhoneNumberSearch()" ><strong>Search</strong></button></td>   
+                            <td>&nbsp;&nbsp;&nbsp;</td>
+		                    <td> IMEI: </td>      
+		                    <td><input id="imsinumber" style="width:200px" /></td>   
+		                    <td><button class="btn " id="btnimsi" onclick="goToPhoneIMEISearch()" ><strong>Search</strong></button></td>   
+			            </tr> 			                    
+		                <tr>
+		                    <td> Application: </td>      
+		                    <td><input id="application" style="width:210px" /></td>   
+		                    <td><button class="btn " id="btnapp" onclick="goToApplicationSearch()" ><strong>Search</strong></button></td>   
+		                    <td>&nbsp;&nbsp;&nbsp;</td>
+		                    <td> ErrorType: </td>     
+		                    <td><input id="etypelist" style="width:210px"/></td>   
+		                    <td><button class="btn " id="btnetype" onclick="goToErrorTypeSearch()" ><strong>Search</strong></button></td>   
+			            </tr> 			                   			                     	               	
+		             </table>
+
+		        </div> 
+		                    
+		        <div id="divAdvancedSearch" style="display: none">			                    
+		            <table>
+		               	<tr>   
+		               	    <td>Product:</td>		               	       	
+		               	    <td><input id="prodlista" style="width:210px" /></td>
+		                    <td><input type="checkbox" id="chka">DateRange:</td>
+		                    <td>
+		                    	<input type="text" id="starta" style="width:93px"/>
+		                        <input type="text" id="enda" style="width:93px"/>
+		                    </td>	                      		  	                		
+		                </tr>			                        
+			                        
+		                <tr>
+		                    <td>Conditions:</td>
+		                    <td><input type="button" id="btn_add" value="+" onClick="addCondition()"/></td>
+		                    <td colspan="3"></td>
+                        </tr>                                                               
+                        <tr>
+                            <td></td>
+		                    <td colspan="4"><div id="cond_list" class="wellx"></div></td> 
+			            </tr>	
+			            <tr>
+			                <td colspan="4"></td>
+                            <td align="right"><button class="btn " id="getcombo" onclick="goToComboSearch()" ><strong>Search</strong></button></td>		                    	
+			            </tr> 	                    
+			        </table>      
+		        </div>		                    			            
+	       	</div>
+	       	                  	           
+	       	<div id="searchtabs">
+	       	    <ul id="listtabs" class="nav nav-stacked"></ul>
+	       	</div> 			   
+		</div>  
+		
+	
+		<div id="divlivetime"  class='wellx' style="display: none;padding-bottom: 5px">
+				<div class="nav nav-tabs" style="padding:1px 25px 5px 25px;">
+                     <div id="radiolives" class="pull-right" style="margin-top: 10px; margin-bottom: 5px">
+                        <input type="radio" id="radiouser" name="radio3" checked="checked"/><label for="radiouser">UserId</label>
+                        <input type="radio" id="radiotime" name="radio3" /><label for="radiotime">Timeline</label>
+                     </div>                       						        	
+				</div>				 
+		                
+		        <div style="padding:1px 25px 5px 25px;">
+		        	<div id="divUserlive">
+		                <table>
+		                    <tr>
+		                        <td>
+		                    	User Id:
+		                        </td> 
+		                    
+		                        <td>
+		                    	   <input type="radio" name="raduserid" id="radphonenumber" checked="checked"/>PhoneNumber
+		                           <input type="radio" name="raduserid" id="radimsi" />IMSI
+		                        </td>  
+		                        <td>
+		                    	   <input id="phoneuser" style="width:200px"/>		                    	
+		                        </td>
+		                        <td>
+		                    	    <button class="btn " id="getlive" onclick="goToLivetimebyUser()">
+		                    	    	<strong>Search</strong>
+		                    	    </button>
+		                        </td>
+		                    	
+		                    </tr>
+		                  </table>
+                    </div>
+
+                    <div id="divTimelive" style="display: none">
+		                <table>		                    
+		                    <tr>
+		                    <td>
+		                    	Date Phase:
+		                    </td> 
+		                    <td>
+		                    	<input type="radio" name="raddates" id="radyear" onclick="oncheckyear()" checked="checked"/>Year
+		                        <input type="radio" name="raddates" id="radmonth"  onclick="oncheckmonth()"/>Month
+		                    </td> 	                                                
+		                    <td>
+		                    	<input id="datevalue" style="width:200px" />
+		                    </td>
+		                    <td>
+		                    	<button class="btn " id="getdate" onclick="goToLivetimebyDate()" ><strong>Search</strong></button>
+		                    </td>
+		                    	
+		                    </tr>		                   
+			            </table>
+			         </div>
+
+	       	        <div id="livechart" class=''></div> 	       	  
+	       	        <div id="livegrid" class=''></div> 	
+	       	    </div>			            			            
+	     </div>		                      
+    </div>
+
+	<footer>
+	    <table align="center" style="border: none">
+		       <tr align="center">
+		    	    <td>
+		    		    <address>Copyright &copy; 2007-2012 Borqs.co</address>
+		    		    <address><a href="mailto:jiliang.chen@borqs.com">contact us</a></address>
+	                </td>
+	          </tr>
+	    </table>             	       	
+	</footer> 
+
+    <script src="kendo/js/jquery.min.js"></script>
+    <script src="kendo/js/kendo.all.min.js"></script> 
+    <script src="js/json2.js"></script>  
+    <script src="js/jquery.cookie.js"></script>
+    <script type="text/javascript">
+        if(($.cookie('bqticket') === null) || ($.cookie('bqticket') === '')) {
+           $.cookie('url_redirect',window.location,{expires:1});
+           window.location = "login.html";
+        }
+    </script>
+	<script src="js/jquery-ui-1.8.17.custom.min.js"></script>
+	<script src="js/date.js"></script>	    
+	<script src="js/daterangepicker.jQuery.compressed.js"></script>   
+    <!--script src="js/bootstrap.min.js"></script-->
+    <!--Bugquery developed js-->               
+    <script type="text/javascript" src="js/data_global.js"></script>  
+    <script type="text/javascript" src="js/comboquery.js"></script>                                
+    <script type="text/javascript" src="js/data_index.js"></script>  
+    <script type="text/javascript" src="js/data_list.js"></script>
+    <script>                           
+        // tabs init with a custom tab template and an "add" callback filling in the content
+        var $tabs = $("#searchtabs").tabs({
+             tabTemplate: "<li><a href='#{href}'>#{label}</a></li>",
+             add: function (event, ui) {
+                 $(ui.panel).append("<div id=errorlist"+tabindex+"></div>");
+                 
+				var li = $(ui.tab).parent();
+				$('<img src="styles/images/close.png"/>') //关闭按钮
+				.appendTo(li)
+				.hover(function(){
+				       var img = $(this);
+				       img.attr('src','styles/images/close_hover2.png');
+				    },
+				    function(){
+				       var img = $(this);
+				       img.attr('src','styles/images/close.png');
+				    }
+				)
+				.click(function(){ //关闭按钮,关闭事件绑定
+				    var li = $(ui.tab).parent();
+				    var index = $('#searchtabs li').index(li.get(0));
+				    $("#searchtabs").tabs("remove",index);
+				    tabcnt--;
+				});                                        
+             }
+        });  
+        
+       // close icon: removing the tab on click
+       // note: closable tabs gonna be an option in the future - see http://dev.jqueryui.com/ticket/3924
+       $("#searchtabs span.ui-icon-closethick").live("click", function () {
+           var index = $("li", $tabs).index($(this).parent());
+           $tabs.tabs("remove", index);
+       });         
+                            
+        function onKeyAction(env) {
+        	if(env.keyCode === 13)
+        	  gotoRecord();
+        }            
+         
+        function oncheckyear() {
+	     $("#datevalue").kendoDatePicker({
+                 value: new Date(2012, 0, 1),			    	
+		 start: "decade",
+		 depth: "decade",    
+             });            	
+        }   
+            
+        function oncheckmonth() {
+             $("#datevalue").kendoDatePicker({
+                 value: new Date(2012, 0, 1),	
+		 start: "year",
+		 depth: "year",
+             });            	
+        } 
+                                   
+        function showSummary() {
+        	 $('#tabstatic').addClass('active');
+        	 $('#tabsearch').removeClass('active'); 
+        	 $('#tablivetime').removeClass('active');          	           	 
+        	 $('#divstatic').show();
+        	 $('#divsearch').hide();        
+        	 $('#divlivetime').hide(); 
+   	             
+             createTimeFilter();           	 	         	
+        }   
+        
+        function showProductSummary() {  
+             $('#lnkbr').hide();      	           	
+        	 $('#lnkproduct').hide();        	          	          	           	 
+        	 $('#divsummary').show();
+        	 $('#diverrors').hide();        
+             $('#radioerror').unbind().bind('click',showProductSummary); 
+             $('#radiodrop').unbind().bind('click',showProductSummary);
+    
+        	 createPlatfDropdown();                       	       	        	         	 	         	
+        }          
+
+
+        function showProductRates() {        	
+             var Productname = getRequestParam(ratecondition,'android.os.Build.PRODUCT');
+             productcondition = "&android.os.Build.PRODUCT=" + Productname;	
+             ggroupname = getRequestParam(ratecondition,'groupby'); 
+                                      
+             $('#lnkbr').show();       	
+        	 $('#lnkproduct').html(Productname);          	
+        	 $('#lnkproduct').show();         	           	 
+        	 $('#diverrors').show();
+        	 $('#divsummary').hide(); 
+             $('#radioerror').unbind().bind('click',showProductRates); 
+             $('#radiodrop').unbind().bind('click',showProductRates);  
+         
+             createGroupDropdown();   
+        	 createErrorRateGrid();         	 	         	
+        }                
+        
+        function showSearch(){
+        	 $('#tabsearch').addClass('active'); 
+        	 $('#tabstatic').removeClass('active'); 
+        	 $('#tablivetime').removeClass('active');          	        	        	
+        	 $('#divsearch').show();
+        	 $('#divstatic').hide();  
+        	 $('#divlivetime').hide();    
+        	 
+             $('#radioquick').unbind().bind('click',showSimpleSearch);
+             $('#radioadvanced').unbind().bind('click',showComboSearch);
+     	     	         	  
+             createProductDropdown();
+             createEtypeDropdown();
+             createSearchApplication();  	       	         	
+        }  
+       
+         function showLivetime(){
+             $('#tablivetime').addClass('active');          	
+             $('#tabsearch').removeClass('active'); 
+             $('#tabstatic').removeClass('active'); 
+        	 
+             $('#radiouser').unbind().bind('click',function(){
+                 $('#divUserlive').show();        	   	        	        	
+                 $('#divTimelive').hide();
+             });
+
+             $('#radiotime').unbind().bind('click',function(){
+                 $('#divTimelive').show();        	   	        	        	
+                 $('#divUserlive').hide();             	
+             });
+
+             //oncheckyear();
+        	      
+        	 $('#divlivetime').show();        	   	        	        	
+        	 $('#divsearch').hide();
+        	 $('#divstatic').hide();        	         	
+        }      
+        
+        
+        function showSimpleSearch(){
+            $('#tabsimpsearch').addClass('active');          	
+            $('#tabcombsearch').removeClass('active'); 
+        	 
+            $('#divSimpleSearch').show();
+            $('#divAdvancedSearch').hide();        	         	
+        } 
+        
+        function showComboSearch(){
+            $('#tabcombsearch').addClass('active');          	
+            $('#tabsimpsearch').removeClass('active'); 
+        	 
+            $('#divSimpleSearch').hide();
+            $('#divAdvancedSearch').show();            	        	         	
+        } 
+                              
+        $(document).ready(function() {
+        	 //Button set
+             $('#radioset').buttonset();
+                       
+             $('#radiosearch').buttonset();
+                                           
+             $('#radiolives').buttonset();
+
+             oncheckyear();         
+
+ 	     //Top 
+             showSummary();
+        	 
+        	 //Summary
+             showProductSummary();                                    
+        });    
+    </script>                                   
+    </body>
+
+</html>
+
