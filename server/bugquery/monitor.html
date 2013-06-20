@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+    <head>
+    	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Real time BugReporter Monitor</title>
+        <link href="kendo/styles/kendo.common.min.css" rel="stylesheet"/>
+        <link href="kendo/styles/kendo.default.min.css" rel="stylesheet"/>
+        <link href="styles/bootstrap.css" rel="stylesheet"/>           
+        <link href="styles/style.css" rel="stylesheet"/>
+       
+        <script src="kendo/js/jquery.min.js"></script>
+        <script src="js/jquery.cookie.js"></script>        
+        <script src="kendo/js/kendo.web.min.js"></script>
+         
+        <script type="text/javascript">
+           if(($.cookie('bqticket') === null) || ($.cookie('bqticket') === '')) {
+              $.cookie('url_redirect',window.location,{expires:1});
+              window.location = "login.html";
+           }
+        </script>   
+        <!--Bugquery developed js-->        
+        <script  type="text/javascript" src="js/data_global.js"></script>                  
+        <script src="js/data_monitor.js"></script> 
+    </head>
+
+    <body>
+    	
+	<!-- HEADER START -->
+	<div class='navbar navbar-inner navbar-fixed-top'>
+			<a class="brand" href="index.html">BugQuery</a>
+			<div class="nav-collapse">
+				<ul class="nav pull-left" id="navtop">
+					<li><a class='navbar-text' href="index.html">Home</a></li>
+					<!--<li><a class='navbar-text' href="monitor.html">Minitor</a></li>-->
+				</ul>
+								          										
+				<ul class="nav pull-right">					
+					<li><a href="javascript:logout();">Logout</a></li>							    
+				</ul>
+				
+				<ul class="nav pull-right"  style="padding-top: 12px">					
+					<a id="loggedid"></a>							    
+				</ul>				
+			</div>
+	</div>
+	<!-- HEADER END -->     
+    	
+    	
+     <div class='row-fluid' style='margin:auto'> 	
+ 	   	<div id="monitorview" class="span12"></div>           
+
+        <script>  
+             $(document).ready(function() {
+                 //createGrid();
+             });
+        
+        </script>
+        
+       <div class="span12">
+	      <hr size="1">
+	
+          <table align="center" style="border: none">
+	           <tr align="center">
+	    	       <td>
+	    		      <address>Copyright &copy; 2007-2012 Borqs.co</address>
+	    		      <address><a href="mailto:jiliang.chen@borqs.com">contact us</a></address>
+                   </td>
+               </tr>
+          </table>             
+       	
+       </div>      
+           
+        
+    </div>          
+   </body>
+</html>
+
