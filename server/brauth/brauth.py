@@ -149,7 +149,7 @@ def getDB(name):
         conn = MongoClient('mongodb://192.168.5.60:27017')
         return conn.brauth
     elif name=='redis':
-        return redis.Redis(connection_pool = redis.ConnectionPool(host='192.168.7.210', port=6379, db=6))
+        return redis.Redis(connection_pool = redis.ConnectionPool(host='192.168.7.218', port=6379, db=6))
     else:
         return None  
     
