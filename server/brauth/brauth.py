@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from pymongo import MongoReplicaSetClient
+from pymongo import MongoClient   
 from pymongo.read_preferences import ReadPreference
 import redis
 
@@ -142,8 +143,10 @@ def is_accessible(token,product):
 
 def getDB(name):
     if name=='mongo':
-        conn=MongoReplicaSetClient('dbserver-1:27017,dbserver-2:27017,dbserver-3:27017', replicaSet='ats_rs')
-        conn.read_preference = ReadPreference.SECONDARY_PREFERRED
+        #conn=MongoReplicaSetClient('dbserver-3:27017', replicaSet='ats_rs')
+        #conn.read_preference = ReadPreference.SECONDARY_PREFERRED
+        #conn.read_preference = ReadPreference.PRIMARY
+        conn = MongoClient('mongodb://192.168.5.60:27017')
         return conn.brauth
     elif name=='redis':
         return redis.Redis(connection_pool = redis.ConnectionPool(host='192.168.7.210', port=6379, db=6))

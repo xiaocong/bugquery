@@ -1092,7 +1092,7 @@ function goToLivetimebyDate(){
 	    
 	    function detailInit(e) {
 	    	livecondition = e.data.link;
-	    	livecondition = livecondition.replace(/(summary\?)/g,'');
+	    	livecondition = livecondition.replace(/(errors\?)/g,'');
 	    	
 	        var funcLiveSub = function (data) {
 		        $("<div/>").appendTo(e.detailCell).kendoGrid({

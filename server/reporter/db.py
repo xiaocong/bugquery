@@ -2,6 +2,7 @@
 
 from config import Config
 from pymongo import MongoReplicaSetClient
+from pymongo import MongoClient
 from pymongo.read_preferences import ReadPreference
 from pymongo.errors import AutoReconnect
 import gridfs
@@ -23,8 +24,9 @@ class DBHelper(object):
 
 
     def getMongoDB(self):
-        conn=MongoReplicaSetClient(Config['ReplicaSetServer'], replicaSet=Config['ReplicaSetName'])
-        conn.read_preference = ReadPreference.SECONDARY_PREFERRED
+        #conn=MongoReplicaSetClient(Config['ReplicaSetServer'], replicaSet=Config['ReplicaSetName'])
+        #conn.read_preference = ReadPreference.PRIMARY
+        conn=MongoClient(Config['MongoServer'])
         return conn.bugreporter
         
     def getRedisDB(self):
