@@ -1,66 +1,69 @@
-BugReporterServer
-
-Structure Map:
-bugquery/   The front-end of the server, for user querying bug report.
-brstore/    Application mainly for storing report data, based on MongoDB.
-brquery/    Application mainly for querying report data, based on Redis.
-brauth/     Application for authentication and authorization.
-doc/        Project related documents.
-lib/        Some necessary library
+# Directories Layout
+  bugquery/    The front-end of the server, for user querying bug report.
+  reporter/    Application provides service for bugreporter related business.
+  brauth/      Application provides service for authentication and authorization.
+  doc/         Project related documents.
 
 
-Prerequisite:
-1.Install pyexcelerator(in lib/)
-2.Install suds(easy_install suds)
+# Prerequirement
+  1. Ubuntu 10.04 LTS and above
+  2. python 2.6 or python 2.7 (preferred)
 
 
-Release notes:
+# Installation
+- Python Packages.
+  $ sudo pip install suds
+  $ sudo pip install pyexcelerator
+  $ sudo pip install bottle
+  $ sudo pip install redis
+  $ sudo pip install pymongo
 
+- Install Apache2 server and required modules for deployment
+  $ sudo apt-get install apache2
+  $ sudo apt-get install libapache2-mod-wsgi
+  $ sudo a2enmod proxy
 
+- Install mongodb server
+  Before running the server, you must set up `mongodb`, `redis` on your local PC
+  $ sudo apt-get install mongodb memcached redis-server
 
-How to config a server?
-Install Ubuntu 10.04 LTS.(32-bit vs 64-bit/ server vs destop)
+# Run the server
+- Running the app with gevent server
+  $ python app.py
 
+- Running the app with apache server
+  $ sudo vi /etc/apache2/mods-enabled/wsgi.conf
+    modify "WSGIRestrictStdout On"  -> "WSGIRestrictStdout Off"
+  $ sudo vi /etc/apache2/sites-enabled/000-default
+    "
+    <VirtualHost *:8010>
+        ServerAdmin webmaster@localhost
+        DocumentRoot /var/www/
 
+        WSGIDaemonProcess reporter user=www-data group=www-data processes=1 threads=30
+        WSGIScriptAlias /api/brquery /path/to/bugquery/server/reporter/reporter.wsgi
+        <Directory /path/to/bugquery/server/reporter/>
+            WSGIProcessGroup reporter
+            WSGIApplicationGroup %{GLOBAL}
+            Order deny,allow
+            Allow from all
+        </Directory>
 
-Install easy_install
-sudo apt-get install python-setuptools
+        WSGIDaemonProcess brauth user=www-data group=www-data processes=1 threads=10
+        WSGIScriptAlias /api/brauth /path/to/bugquery/server/brauth/brauth.wsgi
+        <Directory /path/to/bugquery/server/brauth/>
+            WSGIProcessGroup brauth
+            WSGIApplicationGroup %{GLOBAL}
+            Order deny,allow
+            Allow from all 
+        </Directory>
 
-Install suds(lib for accessing web service)
-sudo easy_install suds
+        ErrorLog /var/log/apache2/bugquery.error.log
 
-Install pyexcelerator(/lib/pyexcelerator/)
-sudo python ./setup.py install
+        # Possible values include: debug, info, notice, warn, error, crit,
+        # alert, emerg.
+        LogLevel info
 
-Install bottle
-sudo easy_install bottle
-
-2.Install Apache2
-sudo apt-get install apache2
-sudo apt-get install libapache2-mod-wsgi
-sudo a2enmod proxy
-sudo vi /etc/apache2/mods-enabled/wsgi.conf   :#WSGIRestrictStdout On  --> WSGIRestrictStdout Off
-
-
-Install MongoDB(32-bit vs 64-bit)
-32-bit:
-wget http://fastdl.mongodb.org/linux/mongodb-linux-i686-2.0.6.tgz
-64-bit:
-wget http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-2.0.6.tgz
-Install pymongo:
-sudo easy_install pymongo
-
-
-Install Redis
-$ wget http://redis.googlecode.com/files/redis-2.4.14.tar.gz
-$ tar xzf redis-2.4.14.tar.gz
-$ cd redis-2.4.14
-$ make
-In order to install Redis binaries into /usr/local/bin just use:
-make install
-Install redis-py:
-sudo easy_install redis
-
-
-
-
+        CustomLog /var/log/apache2/bugquery.access.log combined
+    </VirtualHost>
+    "
