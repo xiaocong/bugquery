@@ -44,7 +44,7 @@
 
   $ sudo apt-get install mongodb memcached redis-server
 
-# Run the server for deployment
+# Run the server (deployment)
 
 - Running the app with gevent server
 
@@ -95,3 +95,5 @@
         LogLevel info
         CustomLog /var/log/apache2/bugquery.access.log combined
         </VirtualHost>
+
+  $ sudo /etc/init.d/apache2 reload
