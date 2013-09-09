@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 import urllib2
 import json
-import os
+
 import dcrator
 
-
-BRAUTH = 'http://localhost:%s/api/brauth' % os.environ.get("SERVER_PORT", 8010)
+BRAUTH = 'http://localhost:8010/api/brauth'
 
 
 def access(url, headers=None, data=None):
@@ -42,6 +41,4 @@ def getAccessibleProducts(token):
         return {'error': 'Encounter error while authenticating.'}
 
 if (__name__ == '__main__'):
-    ret = getAccessibleProducts('6dd851bd-f8fc-4984-832c-88493d8b6314')
-    print type(ret)
-    print ret
+    print 'auth entry'

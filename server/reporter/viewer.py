@@ -416,10 +416,10 @@ class Viewer(object):
         else:
             return {"error":{"code":12,"msg":"Invalid token"}}
         
-        print "conditions:"
+        print "rate_summary - conditions:"
         for key in conditions:
             print "%s:%s"%(key,conditions[key]) 
-        print "Group by:%s"%group
+        print "rate_summary - Group by:%s"%group
         #TODO: Filter result by access right.
         
         #Get work mode: drop/error
@@ -438,6 +438,11 @@ class Viewer(object):
         pipe.smembers('i:k:%s' % group_key)
         pipe.smembers('b:t')
         group_values, types = pipe.execute()
+
+        print "rate_summary - group values:"
+        print group_values
+
+        print "Finish getting the group value and error types."
         
         if mode=='calldrop':
             types=['CALL_DROP']
@@ -456,16 +461,39 @@ class Viewer(object):
         if 'endtime' in conditions:
             endtime=conditions.pop('endtime')
             ntf=True    
-        if ntf:        
-            timeFilteredSet=getTimeFilteredSet(starttime,endtime,timeFilteredSet)        
-            if timeFilteredSet==None:
-                #print "Get empty set after time filterd!"
-                return []#return empty set
-            #print "Item count in filterd set:%s"%r.scard(timeFilteredSet)    
+        if ntf: 
+            timeFilteredSet = self.getTimeFilteredSet({"starttime": starttime, "endtime": endtime})
+
 
         # get all data except uptimes...
         t1=time.clock()
+
+        new_values = []
         
+        for v in group_values:
+            conditions[group_key] = v
+            sets = []
+            for k, v in conditions.items():
+                sets.append('ids:i:%s:%s' % (k,v))
+            if ntf:
+                sets.append(timeFilteredSet)
+            print sets
+            pipe.sinter(sets)
+        
+        ret = pipe.execute()
+
+        for v in group_values:
+            print v
+            #print ret[0]
+            if len(ret[0]) > 0:
+                new_values.append(v)
+            ret.pop(0)
+        
+        group_values = new_values
+        
+        print "New groups:"
+        print group_values
+
         for v in group_values:
             conditions[group_key] = v        
             sets = []
@@ -495,6 +523,8 @@ class Viewer(object):
             pipe.delete(timeFilteredSet)
             
         ret = pipe.execute()
+
+        print "Finish getting all the data..."
         
         t2=time.clock()
             
@@ -504,9 +534,12 @@ class Viewer(object):
             time_ids = cur_ret[1]
             if len(time_ids) > 0:
                 pipe.hmget('s:values', time_ids) 
+                print "---- s:values: v: %s" % v 
+                print time_ids
             cur_ret = show_error_type and cur_ret[3+len(types):] or cur_ret[4:]
         times = pipe.execute() # to get all uptimes in one execute.
-        
+       
+        print "Finish getting all the uptime."
         t3=time.clock()
         
         # go through all results and get the data
@@ -538,6 +571,9 @@ class Viewer(object):
                 results += errors
             ret = show_error_type and ret[3+len(types):] or ret[4:]
             times = times[len(time_ids) and 1 or 0:]
+        
+        print "Finish analyzing the data."
+
         t4=time.clock()
         return results
 
