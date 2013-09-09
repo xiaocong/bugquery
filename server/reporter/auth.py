@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 import urllib2
 import json
-
+import os
 import dcrator
 
-BRAUTH = 'http://localhost:8010/api/brauth'
+BRAUTH = 'http://127.0.0.1:%s/api/brauth' % os.getenv('WEB_PORT', 8010)
 
 
 def access(url, headers=None, data=None):
@@ -26,6 +26,7 @@ def getAccessibleProducts(token):
     Return: {'products':['P1','P2','P3']} or {'error':{'code':'123','msg':'abc'}} or None
     '''
     url = BRAUTH + "/accessible_products?token=" + token
+    print 'url,', url
     try:
         msg = json.loads(access(url))
         if 'results' in msg:

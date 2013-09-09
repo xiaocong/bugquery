@@ -1,14 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import os
 from gevent import monkey
 monkey.patch_all()  # monkey patch for gevent
 
 from gevent.pywsgi import WSGIServer
-from geventwebsocket import WebSocketHandler
 from bottle import Bottle, static_file, redirect
-import os
-
 from brauth.brauth_api import app as auth_app
 from reporter.api import app as report_app
 
@@ -31,7 +29,6 @@ app.mount('/api/brquery', report_app)
 
 
 if (__name__ == '__main__'):
-    host = '127.0.0.1'
-    port = 8010
-    print 'bugquery Serving on %s:%d...' % (host, port)
-    WSGIServer(("", port), app, handler_class=WebSocketHandler).serve_forever()
+    port = os.getenv('WEB_PORT', 8010)
+    print 'bugquery Serving on :%d...' % (port)
+    WSGIServer(('', port), app).serve_forever()

@@ -17,18 +17,25 @@
 
 
 # Installation
+-   Libraries
+
+  Before installing python packages, need to be installed: libsssl, python-dev, livevent.
+
+  $ sudo apt-get install libssl-dev python-dev libevent-dev
 
 - Python Packages.
 
   $ sudo pip install suds
 
-  $ sudo pip install pyexcelerator`
+  $ sudo pip install pyexcelerator
 
   $ sudo pip install bottle
 
   $ sudo pip install redis
 
   $ sudo pip install pymongo
+
+  $ sudo pip install gevent  
 
 - Install Apache2 server and modules for deployment
 
