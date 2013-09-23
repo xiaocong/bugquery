@@ -49,7 +49,7 @@
 
   Before running the server, you must set up `mongodb`, `redis` on your local PC
 
-  $ sudo apt-get install mongodb memcached redis-server
+  $ sudo apt-get install mongodb redis-server
 
 # Run the server (deployment)
 
