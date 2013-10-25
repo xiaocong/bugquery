@@ -17,6 +17,8 @@ var
 var groups =[
            {text: "ro.build.revision", value:"ro.build.revision"},
            {text: "android.os.Build.FINGERPRINT", value:"android.os.Build.FINGERPRINT"},
+           {text: "android.os.Build.VERSION.INCREMENTAL", value:"android.os.Build.VERSION.INCREMENTAL"},
+           {text: "android.os.Build.DISPLAY", value:"android.os.Build.DISPLAY"},
            {text: "android.os.Build.TYPE", value:"android.os.Build.TYPE"},
            {text: "deviceId", value:"deviceId"},
            {text: "gsm.version.baseband", value:"gsm.version.baseband"},

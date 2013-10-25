@@ -139,12 +139,9 @@ def processSync():
 
     fields={'occur_time':False,
             'sys_info.android:os:Build:HOST':False,
-            'sys_info.android:os:Build:FINGERPRINT':False,
             'sys_info.kernelVersion':False,
             'sys_info.android:os:Build:USER':False,
-            'sys_info.android:os:Build:DISPLAY':False,
-            'sys_info.android:os:Build:BOARD':False,
-            'sys_info.android:os:Build:VERSION:INCREMENTAL':False}
+            'sys_info.android:os:Build:BOARD':False}
     
     cursor=db.report_data.find(spec,fields)
     
@@ -231,12 +228,9 @@ def processTrim():
             'receive_time':False,
             'info':False,
             'sys_info.android:os:Build:HOST':False,
-            'sys_info.android:os:Build:FINGERPRINT':False,
             'sys_info.kernelVersion':False,
             'sys_info.android:os:Build:USER':False,
-            'sys_info.android:os:Build:DISPLAY':False,
             'sys_info.android:os:Build:BOARD':False,
-            'sys_info.android:os:Build:VERSION:INCREMENTAL':False,
             'sys_info.android:os:Build:TIME':False}
     reserveTime=int(time.time())-90*24*3600
     ids=dbHelper.redisDB.zrangebyscore('ss:ids',0,reserveTime)

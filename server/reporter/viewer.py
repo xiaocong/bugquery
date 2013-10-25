@@ -569,7 +569,12 @@ class Viewer(object):
                 if len(time_ids) > 0:
                     cur_times = times[0]
                     if mode == "error":
-                        uptime = sum(long(t) for t in cur_times) / 3600.
+                        total = 0
+                        for t in cur_times:
+                           if t is not None:
+                              total = total + long(t)
+                        uptime = total/3600
+                        #uptime = sum(long(t) for t in cur_times) / 3600.
                     else:
                         uptime = sum(int(t) for t in cur_times)
 
