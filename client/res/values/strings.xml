@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--ManualReportActivity -->
+    <string name="app_name">BugReporter</string>
+    
+    <string name="manual_app_name_label">App Name:</string>
+    <string name="manual_app_name_hint">Input app name here if you know.</string>
+    <string name="manual_description_label">Description:</string>
+    <string name="manual_description_hint">Input descriptions here.</string>
+    
+    <string name="manual_attachment_label">Log Attachments:</string>
+    <string name="manual_with_ap_online_log">AP online log.</string>
+    <string name="manual_with_ap_offline_log">AP offline log.</string>
+    <string name="manual_with_radio_log">Radio log.</string>
+    <string name="empty_line"></string>
+    
+    
+    <string name="manual_submit_now">Submit</string>
+    
+    
+    <!--SettingsActivity -->
+    <string name="settings_activity_name">BugReporter Settings</string>
+    
+    <string name="bug_report">BugReporter</string>
+    <string name="bug_report_enable">BugReporter enabled</string>
+    <string name="bug_report_disable">BugReporter disabled</string>
+      
+    <string name="server_address">Server Address</string>
+    
+    <string name="wifi_only">Sending via WLAN only</string>
+    <string name="wifi_only_summary_enable">Using WLAN only</string>
+    <string name="wifi_only_summary_disable">Using all available connections</string>
+    
+    <string name="type_control">Type Control List</string>
+    <string name="local_data">Local Data</string>
+    <string name="system_info">System Info</string>
+    
+    <string name="upload_log">Upload Logs</string>
+    <string name="upload_log_summary_enable">Upload logs to server enabled</string>
+    <string name="upload_log_summary_disable">Don\'t upload logs to server</string>
+    
+    <string name="notification">User Notifications</string>
+    <string name="user_notify_summary_enable">Show user notifications enabled</string>
+    <string name="user_notify_summary_disable">Don\'t show user notifications</string>
+    
+    <string name="about">About</string>
+
+    
+    <!--TypeControlListActivity -->
+    <string name="type_control_list_activity_name">Type Control List</string>
+    
+    <!--LocalDataActivity -->
+    <string name="local_data_activity_name">Local Data</string>
+    
+    <!--SystemInfoActivity -->
+    <string name="system_info_activity_name">System Information</string>
+    <string name="title_device_info">DEVICE INFO</string>
+    <string name="title_basic_system_info">BASIC SYSTEM INFO</string>
+    <string name="title_build_info">BUILD INFO</string>
+    
+    
+    <!--AboutActivity -->
+    <string name="about_activity_name">About</string>
+    <string name="version_name">bugreporter.version.name</string>
+    <string name="version_code">bugreporter.version.code</string>
+    
+    <!--UserNotifyActivity -->
+    <string name="user_notify_activity_name">BugReporter Notify</string>
+    
+    
+    <!--DevLauncherActivity -->
+    <string name="dev_laucher_activity_name">Development tools</string>
+    
+    
+</resources>
