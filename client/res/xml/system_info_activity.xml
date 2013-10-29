@@ -1,0 +1,46 @@
+<PreferenceScreen
+        xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory android:title="@string/title_device_info">
+        <Preference android:key="phone_number"/> 
+        <Preference android:key="imei_number"/>
+        <Preference android:key="wifi_mac"/>
+    </PreferenceCategory>
+
+    <!-- PreferenceCategory android:title="@string/title_basic_system_info">
+        <Preference android:key="kernel_version"/>
+        <Preference android:key="platform_ware"/>
+        <Preference android:key="custom_build_version"/>
+    </PreferenceCategory> -->
+
+    <PreferenceCategory android:title="@string/title_build_info">
+        <Preference android:key="kernel_version"/>
+        <Preference android:key="platform_ware"/>
+        <Preference android:key="custom_build_version"/>
+        <Preference android:key="board"/>
+        <Preference android:key="bootloader"/>
+        <Preference android:key="brand"/>
+        <Preference android:key="cpu_abi"/>
+        <Preference android:key="cpu_abi2"/>
+        <Preference android:key="device"/>
+        <Preference android:key="display"/>
+        <Preference android:key="fingerprint"/>
+        <Preference android:key="hardware"/>
+        <Preference android:key="host"/>
+        <Preference android:key="id"/>
+        <Preference android:key="manufacture"/>
+        <Preference android:key="model"/>
+        <Preference android:key="product"/>
+        <Preference android:key="radio"/>
+        <Preference android:key="serial"/>
+        <Preference android:key="tags"/>
+        <Preference android:key="time"/>
+        <Preference android:key="type"/>
+        <Preference android:key="user"/>
+        <Preference android:key="version_codename"/>
+        <Preference android:key="version_incremental"/>
+        <Preference android:key="version_release"/>
+        <Preference android:key="version_sdk"/>
+    </PreferenceCategory>
+
+</PreferenceScreen>

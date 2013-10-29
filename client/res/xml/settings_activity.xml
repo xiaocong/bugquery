@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <CheckBoxPreference 
+        android:key="bug_report" 
+        android:title="@string/bug_report"
+        android:disableDependentsState="false"
+        android:summaryOff="@string/bug_report_disable" 
+        android:summaryOn="@string/bug_report_enable" />
+    
+    <EditTextPreference 
+        android:key="server_address" 
+        android:title="@string/server_address"/>
+    
+    <CheckBoxPreference 
+        android:key="wifi_only" 
+        android:title="@string/wifi_only" 
+        android:disableDependentsState="false" 
+        android:summaryOff="@string/wifi_only_summary_disable" 
+        android:summaryOn="@string/wifi_only_summary_enable" />
+    
+    <CheckBoxPreference 
+        android:key="upload_log" 
+        android:title="@string/upload_log" 
+        android:disableDependentsState="false" 
+        android:summaryOff="@string/upload_log_summary_disable" 
+        android:summaryOn="@string/upload_log_summary_enable" />
+    
+    <CheckBoxPreference 
+        android:key="notification" 
+        android:title="@string/notification" 
+        android:disableDependentsState="false" 
+        android:summaryOff="@string/user_notify_summary_disable" 
+        android:summaryOn="@string/user_notify_summary_enable" />
+    
+    <Preference 
+        android:key="type_control" 
+        android:title="@string/type_control"/>
+    
+    <Preference 
+        android:key="local_data" 
+        android:title="@string/local_data"/>
+    
+    <Preference 
+        android:key="system_info" 
+        android:title="@string/system_info"/>
+    
+    <Preference 
+        android:key="about" 
+        android:title="@string/about"/>
+    
+</PreferenceScreen>

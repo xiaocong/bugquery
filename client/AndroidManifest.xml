@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.borqs.bugreporter"
+    android:versionCode="3"
+    android:versionName="3.0.1" >
+
+    <uses-sdk
+        android:minSdkVersion="11"
+        android:targetSdkVersion="17" />
+    
+    <uses-permission android:name="android.permission.READ_LOGS"/>
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+	<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+	<uses-permission android:name="android.permission.WRITE_SETTINGS" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name" >
+        
+        
+        <!-- BugReporter Provider -->
+        <provider android:name="com.borqs.bugreporter.provider.BugReportProvider"
+			android:authorities="com.borqs.bugreporter.provider.BugReport">
+		</provider>
+		
+        
+        <!-- Manual Report Activity -->
+        <activity android:name=".manual.ManualReportActivity"
+            android:label="@string/app_name" 
+            android:windowSoftInputMode="stateVisible|adjustPan">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.borqs.bugreporter.MANUAL_REPORT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.TEST" />
+            </intent-filter> 
+        </activity>
+        
+        
+        <!-- Message Receiver -->
+        <receiver android:name=".MessageReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.DROPBOX_ENTRY_ADDED" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+            </intent-filter>
+        </receiver>
+        
+        
+        <!-- Services -->
+        <service android:name=".ProcessorService">
+			<intent-filter>
+				<action android:name="com.borqs.bugreporter.ACTION_MSG_DROPBOX" />
+			</intent-filter>
+			<intent-filter>
+				<action android:name="com.borqs.bugreporter.ACTION_MSG_BOOT" />
+			</intent-filter>
+		</service>
+		
+        <service android:name=".ReportDataWrapper">
+			<intent-filter>
+				<action android:name="com.borqs.bugreporter.BUG_NOTIFY" />
+			</intent-filter>
+		</service>
+		
+        <service android:name=".SenderService">
+			<intent-filter>
+				<action android:name="com.borqs.bugreporter.SEND_REPORT" />
+			</intent-filter>
+		</service>
+		
+        <service android:name=".collector.LiveTimeCollector">
+			<intent-filter>
+				<action android:name="com.borqs.bugreporter.MONITOR_LIVE_TIME" />
+			</intent-filter>
+		</service>
+		
+        
+        <!-- Settings -->
+        <activity android:name=".settings.SettingsActivity"
+            android:label="@string/settings_activity_name" > 
+			<intent-filter> 
+				<action android:name="android.intent.action.MAIN" /> 
+				<category android:name="android.intent.category.TEST" />
+			</intent-filter> 
+		</activity>
+		
+		<activity android:name=".settings.TypeControlListActivity"
+		    android:label="@string/type_control_list_activity_name">
+			<intent-filter>
+				<action android:name="com.borqs.bugreporter.TYPE_CONTROL_LIST" />
+				<category android:name="android.intent.category.DEFAULT" />
+			</intent-filter>
+		</activity>
+		
+		<activity android:name=".settings.LocalDataActivity"
+		     android:label="@string/local_data_activity_name">
+			<intent-filter>
+				<action android:name="com.borqs.bugreporter.VIEW_LOCAL_DATA" />
+				<category android:name="android.intent.category.DEFAULT" />
+			</intent-filter>
+		</activity>
+		
+        <activity android:name=".settings.SystemInfoActivity"
+            android:label="@string/system_info_activity_name">
+			<intent-filter>
+				<action android:name="com.borqs.bugreporter.VIEW_SYSTEM_INFO" />
+				<category android:name="android.intent.category.DEFAULT" />
+			</intent-filter>
+		</activity>
+		
+        <activity android:name=".settings.AboutActivity"
+            android:label="@string/about_activity_name">
+			<intent-filter>
+				<action android:name="com.borqs.bugreporter.VIEW_ABOUT" />
+				<category android:name="android.intent.category.DEFAULT" />
+			</intent-filter>
+		</activity>
+		
+        <activity android:name=".UserNotifyActivity"
+            android:label="@string/user_notify_activity_name">
+			<intent-filter>
+				<action android:name="com.borqs.bugreporter.NOTIFY_RESULT" />
+				<category android:name="android.intent.category.DEFAULT" />
+			</intent-filter>
+		</activity>
+		
+        
+        <!-- Dev Launcher -->
+		<receiver android:name=".dev.DevLauncherReceiver">
+			<intent-filter>
+				<action android:name="android.provider.Telephony.SECRET_CODE" />
+				<data android:scheme="android_secret_code" android:host="338" />
+			</intent-filter>
+		</receiver>
+        <activity android:name=".dev.DevLauncherActivity" 
+            android:label="@string/dev_laucher_activity_name" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+        
+    </application>
+
+</manifest>
