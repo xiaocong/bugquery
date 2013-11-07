@@ -9,6 +9,7 @@ import uuid
 from time import time
 from datetime import datetime,timedelta
 import mantis
+import json
 
 '''
 Author: Chen Jiliang
@@ -113,7 +114,7 @@ def get_log(record_id):
         
 @app.route('/record/<record_id>/ticket_url',method='POST')
 #@brdecorator.check_user(brdecorator.auth,"brquery")
-def set_ticket_url(record_id):  
+def set_ticket_url(record_id, url):  
     print "brstore_api.set_ticket_url(%s)"%record_id                   
     #url=request.params.get("url")
     datatype = request.headers.get('Content-Type').split(';')[0]
@@ -611,7 +612,7 @@ def submit():
     '''
     record_id,url=mantis.submit()
     print "record_id=%s,url=%s"%(record_id,url)
-    proxy.set_ticket_url(record_id,url)    
+    set_ticket_url(record_id,url)    
     return json.dumps({"results":{"url":url}})
 
 
